@@ -1663,11 +1663,23 @@ function setHabitsCustom(c) { LS.set('habits_custom', c); }
 function getActiveHabits() {
   const custom = getHabitsCustom();
   if (!custom.edits) custom.edits = {};
-  // Apply edits to defaults in-place, filter deleted, then append added
-  const base = ALL_HABITS
-    .filter(h => !custom.deleted.includes(h.id))
-    .map(h => custom.edits[h.id] ? { ...h, ...custom.edits[h.id] } : h);
-  return base.concat(custom.added);
+  // Build list in ALL_HABITS order, apply edits, skip deleted
+  const result = [];
+  ALL_HABITS.forEach(h => {
+    if (custom.deleted.includes(h.id)) {
+      // Check if it was edited via old system (in added array) — restore it in order
+      const inAdded = custom.added.find(a => a.id === h.id);
+      if (inAdded) {
+        result.push({ ...h, ...inAdded });
+      }
+      return;
+    }
+    result.push(custom.edits[h.id] ? { ...h, ...custom.edits[h.id] } : h);
+  });
+  // Append truly new custom habits (not matching any default id)
+  const defaultIds = ALL_HABITS.map(h => h.id);
+  custom.added.filter(a => !defaultIds.includes(a.id)).forEach(a => result.push(a));
+  return result;
 }
 
 function deleteHabit(id) {
