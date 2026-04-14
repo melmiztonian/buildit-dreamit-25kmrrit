@@ -1873,9 +1873,11 @@ function renderHabitBlock(h, container, renderAllFn) {
     const expectedByNow = Math.max(0, h.yearGoal - (weeksLeft * h.weekTarget));
     const behind = expectedByNow - yearTotal;
     const stillNeededThisWeek = Math.max(0, pacePerWeek - weekTotal);
+    const endOfWeekTarget = Math.max(0, h.yearGoal - ((weeksLeft - 1) * h.weekTarget));
     let lines = `<strong>${remaining}</strong> remaining to hit yearly goal<br>Need <strong>${pacePerWeek}</strong>/week for ${weeksLeft} weeks`;
+    lines += `<br>End-of-week target: <strong>${endOfWeekTarget}</strong> total (need <strong>${Math.max(0, endOfWeekTarget - yearTotal)}</strong> more this week)`;
     if (behind > 0) {
-      lines += `<br><span style="color:var(--terracotta);">Behind by <strong>${behind}</strong> &mdash; do <strong>${stillNeededThisWeek}</strong> more this week to catch up</span>`;
+      lines += `<br><span style="color:var(--terracotta);">Behind by <strong>${behind}</strong></span>`;
     } else {
       lines += `<br><span style="color:var(--sage);">On track! <strong>${Math.abs(behind)}</strong> ahead of pace</span>`;
     }
