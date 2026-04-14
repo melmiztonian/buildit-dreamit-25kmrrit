@@ -92,7 +92,7 @@ body {
 
 /* ======== MAIN ======== */
 .main-content {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 24px 24px 80px;
 }
@@ -959,6 +959,19 @@ body {
 .archive-item .a-title { text-decoration: line-through; }
 .archive-item .a-date { font-size: 0.75rem; margin-left: 8px; }
 
+/* ======== TWO-COLUMN LAYOUT ======== */
+@media (min-width: 900px) {
+  .two-col-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 20px;
+    align-items: start;
+  }
+  .two-col-layout .full-width {
+    grid-column: 1 / -1;
+  }
+}
+
 /* ======== RESPONSIVE ======== */
 @media (max-width: 768px) {
   .global-header { padding: 24px 16px 0; }
@@ -1001,10 +1014,10 @@ body {
 <div class="main-content">
 
 <!-- ==================== TAB 1: DASHBOARD ==================== -->
-<section id="tab-dashboard" class="tab-page active">
+<section id="tab-dashboard" class="tab-page active two-col-layout">
 
   <!-- Read Me -->
-  <div class="card">
+  <div class="card full-width">
     <div class="card-title">READ ME!!</div>
     <div class="readme-scroll">
       <p class="readme-lead">You care deeply about connection.</p>
@@ -1064,7 +1077,7 @@ body {
   </div>
 
   <!-- Revenue Tracker -->
-  <div class="card">
+  <div class="card full-width">
     <div class="card-title">Revenue Tracker</div>
     <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">
       <span style="font-size:1.4rem;color:var(--muted);">$</span>
@@ -1095,7 +1108,7 @@ body {
 </section>
 
 <!-- ==================== TAB 2: HABIT TRACKER ==================== -->
-<section id="tab-habits" class="tab-page">
+<section id="tab-habits" class="tab-page two-col-layout">
 
   <!-- Primary Keystones (synced) -->
   <div class="card">
