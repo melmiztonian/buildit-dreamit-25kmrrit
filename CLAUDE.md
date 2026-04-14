@@ -161,6 +161,7 @@ Each habit block shows:
   - **Year view**: Centered 12-month grid (4 columns), each month is a mini-calendar with S/M/T/W/T/F/S headers and day numbers. Clickable for check-type habits. Today highlighted.
 
 ### Add/Delete Habits
+- **Edit**: hover over any habit block to reveal a pencil button in header. Opens an inline form (same fields as add) pre-filled with current values. For default habits, saves an edited copy (original ID preserved so data carries over). For custom habits, updates in-place.
 - **Delete**: hover over any habit block to reveal x button in header. Deleting a default habit adds its ID to `habits_custom.deleted`. Deleting a custom habit removes it from `habits_custom.added`.
 - **Add**: "+ Add habit" button below each group opens an inline form (name, emoji, type, weekly target, year goal, unit). Creates a new habit with ID `custom_` + timestamp.
 - Storage: `habits_custom` in localStorage: `{ added: [...habit objects], deleted: ['id1', ...] }`

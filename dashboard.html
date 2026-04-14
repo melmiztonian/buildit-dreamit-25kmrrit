@@ -704,9 +704,67 @@ body {
   flex-shrink: 0;
   opacity: 0;
 }
+.habit-edit-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--sand);
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  opacity: 0;
+}
 .habit-block:hover .habit-delete-btn,
-.habit-delete-btn:focus { opacity: 1; }
+.habit-block:hover .habit-edit-btn,
+.habit-delete-btn:focus,
+.habit-edit-btn:focus { opacity: 1; }
 .habit-delete-btn:hover { background: rgba(192,57,43,0.1); color: #c0392b; }
+.habit-edit-btn:hover { background: rgba(196,122,90,0.1); color: var(--terracotta); }
+.habit-edit-form {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.habit-edit-form label {
+  font-size: 0.76rem;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 3px;
+  margin-top: 8px;
+}
+.habit-edit-form label:first-child { margin-top: 0; }
+.habit-edit-form input,
+.habit-edit-form select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+}
+.habit-edit-form input:focus,
+.habit-edit-form select:focus { border-color: var(--terracotta); }
+.habit-edit-form .hab-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.habit-edit-form .hab-form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
 .habit-add-btn {
   padding: 8px 18px;
   border: 1px dashed var(--sand);
@@ -1599,6 +1657,25 @@ function deleteHabit(id) {
   renderAllHabits();
 }
 
+function saveHabitEdit(id, group, fields) {
+  const custom = getHabitsCustom();
+  // Check if it's a custom habit
+  const addedIdx = custom.added.findIndex(h => h.id === id);
+  if (addedIdx !== -1) {
+    // Update in-place
+    Object.assign(custom.added[addedIdx], fields);
+  } else {
+    // It's a default habit — "delete" the original and add an edited copy
+    if (!custom.deleted.includes(id)) custom.deleted.push(id);
+    // Remove any previous edit of this default
+    custom.added = custom.added.filter(h => h.id !== id);
+    custom.added.push({ id, group, ...fields });
+  }
+  setHabitsCustom(custom);
+  if (habitUIState[id]) habitUIState[id].editing = false;
+  renderAllHabits();
+}
+
 function addHabit(group) {
   const formId = 'hab-add-form-' + group;
   const form = $(formId);
@@ -1662,13 +1739,63 @@ function renderHabitBlock(h, container, renderAllFn) {
       <span class="habit-block-count">${yearTotal} / ${h.yearGoal} this year</span>
     </div>
   `;
+  const editBtn = document.createElement('button');
+  editBtn.className = 'habit-edit-btn';
+  editBtn.title = 'Edit habit';
+  editBtn.textContent = '\u270E';
+  editBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    habitUIState[h.id] = habitUIState[h.id] || {};
+    habitUIState[h.id].editing = !habitUIState[h.id].editing;
+    renderAllHabits();
+  });
   const delBtn = document.createElement('button');
   delBtn.className = 'habit-delete-btn';
   delBtn.title = 'Remove habit';
   delBtn.textContent = '\u00D7';
   delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteHabit(h.id); });
+  hdr.appendChild(editBtn);
   hdr.appendChild(delBtn);
   block.appendChild(hdr);
+
+  // Edit form (if editing)
+  if (ui.editing) {
+    const ef = document.createElement('div');
+    ef.className = 'habit-edit-form';
+    ef.innerHTML = `
+      <label>Name</label>
+      <input type="text" data-field="name" value="${h.name.replace(/"/g, '&quot;')}">
+      <div class="hab-form-row">
+        <div><label>Emoji</label><input type="text" data-field="emoji" value="${h.emoji}"></div>
+        <div><label>Type</label><select data-field="type"><option value="check" ${h.type==='check'?'selected':''}>Checkbox (daily)</option><option value="number" ${h.type==='number'?'selected':''}>Number (reps/min)</option></select></div>
+      </div>
+      <div class="hab-form-row">
+        <div><label>Weekly target</label><input type="number" data-field="weekTarget" value="${h.weekTarget}" min="1"></div>
+        <div><label>Year goal</label><input type="number" data-field="yearGoal" value="${h.yearGoal}" min="1"></div>
+      </div>
+      <label>Unit</label>
+      <input type="text" data-field="unit" value="${h.unit}">
+      <div class="hab-form-actions">
+        <button class="btn-sm" data-action="save">Save</button>
+        <button class="btn-sm" data-action="cancel">Cancel</button>
+      </div>
+    `;
+    ef.querySelector('[data-action="save"]').addEventListener('click', () => {
+      saveHabitEdit(h.id, h.group, {
+        name: ef.querySelector('[data-field="name"]').value.trim(),
+        emoji: ef.querySelector('[data-field="emoji"]').value.trim(),
+        type: ef.querySelector('[data-field="type"]').value,
+        weekTarget: parseInt(ef.querySelector('[data-field="weekTarget"]').value) || 1,
+        yearGoal: parseInt(ef.querySelector('[data-field="yearGoal"]').value) || 52,
+        unit: ef.querySelector('[data-field="unit"]').value.trim() || 'x/week'
+      });
+    });
+    ef.querySelector('[data-action="cancel"]').addEventListener('click', () => {
+      ui.editing = false;
+      renderAllHabits();
+    });
+    block.appendChild(ef);
+  }
 
   // Week input grid with dates
   const weekStart = new Date(getWeekStart(today));
