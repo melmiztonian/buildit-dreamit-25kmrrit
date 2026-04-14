@@ -1865,11 +1865,22 @@ function renderHabitBlock(h, container, renderAllFn) {
   `;
   block.appendChild(stats);
 
-  // Pace info (two lines)
+  // Pace info (with catch-up line)
   const pace = document.createElement('div');
   pace.className = 'habit-pace';
   if (remaining > 0) {
-    pace.innerHTML = `<strong>${remaining}</strong> remaining to hit yearly goal<br>Need <strong>${pacePerWeek}</strong>/week for ${weeksLeft} weeks`;
+    // Expected by now based on even weekly spread
+    const expectedByNow = Math.round(h.yearGoal * (dayOfYear / 365));
+    const behind = expectedByNow - yearTotal;
+    const catchUpThisWeek = Math.max(0, pacePerWeek - h.weekTarget);
+    const stillNeededThisWeek = Math.max(0, pacePerWeek - weekTotal);
+    let lines = `<strong>${remaining}</strong> remaining to hit yearly goal<br>Need <strong>${pacePerWeek}</strong>/week for ${weeksLeft} weeks`;
+    if (behind > 0) {
+      lines += `<br><span style="color:var(--terracotta);">Behind by <strong>${behind}</strong> &mdash; do <strong>${stillNeededThisWeek}</strong> more this week to catch up</span>`;
+    } else {
+      lines += `<br><span style="color:var(--sage);">On track! <strong>${Math.abs(behind)}</strong> ahead of pace</span>`;
+    }
+    pace.innerHTML = lines;
   } else {
     pace.innerHTML = `<strong>Year goal reached!</strong> \uD83C\uDF89`;
   }
