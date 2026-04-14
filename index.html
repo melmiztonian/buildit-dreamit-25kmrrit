@@ -1869,9 +1869,8 @@ function renderHabitBlock(h, container, renderAllFn) {
   const pace = document.createElement('div');
   pace.className = 'habit-pace';
   if (remaining > 0) {
-    // Expected by now: weeks elapsed so far × weekly target
-    const weeksElapsed = Math.floor(dayOfYear / 7);
-    const expectedByNow = Math.min(h.yearGoal, weeksElapsed * h.weekTarget);
+    // Expected by now: yearGoal minus what you can still do in remaining weeks
+    const expectedByNow = Math.max(0, h.yearGoal - (weeksLeft * h.weekTarget));
     const behind = expectedByNow - yearTotal;
     const stillNeededThisWeek = Math.max(0, pacePerWeek - weekTotal);
     let lines = `<strong>${remaining}</strong> remaining to hit yearly goal<br>Need <strong>${pacePerWeek}</strong>/week for ${weeksLeft} weeks`;
