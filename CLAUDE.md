@@ -2,15 +2,28 @@
 
 ## What this project is
 
-A single-file local HTML dashboard (`dashboard.html`) — Melanie's personal founder OS for hellomelmo.com. Open daily in browser as a `file://` local page. No build tools, no server required.
+A single-file HTML dashboard (`dashboard.html`) — Melanie's personal founder OS for hellomelmo.com. Hosted on GitHub Pages, syncs data across devices via Supabase.
 
-## The file
+**Live URL:** https://melmiztonian.github.io/buildit-dreamit-25kmrrit/
+
+## The files
 
 ```
 dashboard.html   ← entire app — HTML + CSS + JS in one file
+index.html       ← copy of dashboard.html for GitHub Pages (always keep in sync)
 CLAUDE.md        ← this file — update after every dashboard.html change
 .claude/settings.json  ← PostToolUse hook that reminds Claude to update CLAUDE.md
 ```
+
+**Deploy workflow:** edit dashboard.html → `cp dashboard.html index.html` → commit → push → GitHub Pages auto-deploys.
+
+## Supabase Sync
+
+- **Project URL:** `https://ingvjqyqoqggskkrklhk.supabase.co`
+- **Anon key:** hardcoded in `<script>` as `SB_KEY`
+- **Table:** `dashboard_state` (key TEXT PK, value JSONB, updated_at TIMESTAMPTZ)
+- **How it works:** `LS.set()` writes to both localStorage (instant) and Supabase (batched every 500ms). On page load, `syncFromSupabase()` pulls all remote state and re-renders if anything changed.
+- **Offline-safe:** if Supabase is unreachable, localStorage works as fallback.
 
 ---
 

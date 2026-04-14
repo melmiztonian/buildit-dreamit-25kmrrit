@@ -1293,10 +1293,69 @@ body {
    UTILITIES
    ================================================================ */
 const $ = id => document.getElementById(id);
+
+/* ---- Supabase sync ---- */
+const SB_URL = 'https://ingvjqyqoqggskkrklhk.supabase.co';
+const SB_KEY = 'sb_publishable_a_7d3ojYoI3Glt0R9AMbhA_1rH_urFn';
+const SB_HEADERS = {
+  'apikey': SB_KEY,
+  'Authorization': 'Bearer ' + SB_KEY,
+  'Content-Type': 'application/json',
+  'Prefer': 'resolution=merge-duplicates'
+};
+
+// Write queue to batch Supabase writes
+const _sbQueue = {};
+let _sbTimer = null;
+function _sbFlush() {
+  const entries = Object.entries(_sbQueue);
+  if (!entries.length) return;
+  const rows = entries.map(([key, value]) => ({ key, value, updated_at: new Date().toISOString() }));
+  // Clear queue before sending
+  for (const k of Object.keys(_sbQueue)) delete _sbQueue[k];
+  fetch(SB_URL + '/rest/v1/dashboard_state', {
+    method: 'POST',
+    headers: SB_HEADERS,
+    body: JSON.stringify(rows)
+  }).catch(() => {}); // silent fail — localStorage is the fallback
+}
+function _sbWrite(k, v) {
+  _sbQueue[k] = v;
+  clearTimeout(_sbTimer);
+  _sbTimer = setTimeout(_sbFlush, 500); // batch writes every 500ms
+}
+
 const LS = {
   get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
-  set(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+  set(k, v) { localStorage.setItem(k, JSON.stringify(v)); _sbWrite(k, v); }
 };
+
+// On page load: pull all state from Supabase and merge into localStorage
+async function syncFromSupabase() {
+  try {
+    const res = await fetch(SB_URL + '/rest/v1/dashboard_state?select=key,value', {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    if (!res.ok) return;
+    const rows = await res.json();
+    let changed = false;
+    for (const row of rows) {
+      const local = localStorage.getItem(row.key);
+      const remote = JSON.stringify(row.value);
+      if (local !== remote) {
+        localStorage.setItem(row.key, remote);
+        changed = true;
+      }
+    }
+    if (changed) {
+      // Re-render everything with synced data
+      renderAllHabits();
+      initRevenue();
+      initCal();
+      renderLibrary();
+    }
+  } catch { /* offline — use localStorage */ }
+}
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 function getWeekStart(d) {
   const dt = new Date(d);
@@ -2091,6 +2150,8 @@ function init() {
   initRevenue();
   initCal();
   renderLibrary();
+  // Pull remote state and re-render if anything changed
+  syncFromSupabase();
 }
 init();
 </script>
