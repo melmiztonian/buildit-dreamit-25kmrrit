@@ -959,15 +959,24 @@ body {
 .archive-item .a-title { text-decoration: line-through; }
 .archive-item .a-date { font-size: 0.75rem; margin-left: 8px; }
 
-/* ======== TWO-COLUMN LAYOUT ======== */
+/* ======== TWO-COLUMN LAYOUTS ======== */
+.two-up-row {
+  display: block;
+}
 @media (min-width: 900px) {
-  .two-col-layout.active {
-    display: grid !important;
+  .two-up-row {
+    display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0 20px;
+    gap: 20px;
     align-items: start;
   }
-  .two-col-layout .full-width {
+  .habit-grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .habit-grid-2col > .habit-add-btn,
+  .habit-grid-2col > .habit-add-form {
     grid-column: 1 / -1;
   }
 }
@@ -1014,70 +1023,72 @@ body {
 <div class="main-content">
 
 <!-- ==================== TAB 1: DASHBOARD ==================== -->
-<section id="tab-dashboard" class="tab-page active two-col-layout">
+<section id="tab-dashboard" class="tab-page active">
 
-  <!-- Read Me -->
-  <div class="card full-width">
-    <div class="card-title">READ ME!!</div>
-    <div class="readme-scroll">
-      <p class="readme-lead">You care deeply about connection.</p>
-      <p>Not in a vague way. In a very real, personal way.</p>
-      <p>You've spent years paying attention to what actually makes people feel close. What makes friendships last. What makes someone feel seen.</p>
-      <p>And you've learned something most people don't realize.</p>
-      <p class="readme-em">So many people are quietly lonely.</p>
-      <p>Not because they don't care about others. Not because they don't want friends.</p>
-      <p>But because everyone is waiting.</p>
-      <p>Waiting for someone else to text first. Waiting to be invited. Waiting to feel chosen.</p>
-      <p>And when everyone waits, nothing starts.</p>
-      <p>But you've seen the pattern.</p>
-      <p>Connection almost always begins the same way.</p>
-      <p>One person decides to care a little more. One person sends the message. One person asks the deeper question.</p>
-      <p>And that small moment can change someone's whole week.</p>
-      <p>Sometimes even their life.</p>
-      <p>You know this because you've experienced both sides.</p>
-      <p>You know what it feels like to want deeper connection. And you know how powerful it is when someone reaches out first.</p>
-      <p>Most people don't realize they can be that person.</p>
-      <p>They think connection is something lucky people stumble into.</p>
-      <p>But it's not.</p>
-      <p class="readme-em">Connection is built. And it usually starts with one small act of courage.</p>
-      <p>A message. A question. A moment of honesty.</p>
-      <p>That's why you talk about this.</p>
-      <p>Not because you're trying to sell something.</p>
-      <p>Because you genuinely want people to feel less alone.</p>
-      <p>Because you know how meaningful it is when someone decides to care.</p>
-      <p>Your job today isn't to convince anyone of anything.</p>
-      <p>Your job is to serve the person who is already feeling this.</p>
-      <p>The person who misses their friends but doesn't know how to reach out. The person who wants deeper conversations but doesn't know how to start them. The person who wants more connection but keeps waiting.</p>
-      <p>If even one person hears what you share and decides to send a message, check in on someone, or ask a real question&hellip;</p>
-      <p>then the work matters.</p>
-      <p>So today you show up.</p>
-      <p>You share what you know. You speak honestly about connection.</p>
-      <p>And you trust that the right person will hear it.</p>
-      <p class="readme-em">Because connection isn't something we wait for.</p>
-      <p class="readme-em">It's something we create.</p>
+  <div class="two-up-row">
+    <!-- Read Me -->
+    <div class="card">
+      <div class="card-title">READ ME!!</div>
+      <div class="readme-scroll">
+        <p class="readme-lead">You care deeply about connection.</p>
+        <p>Not in a vague way. In a very real, personal way.</p>
+        <p>You've spent years paying attention to what actually makes people feel close. What makes friendships last. What makes someone feel seen.</p>
+        <p>And you've learned something most people don't realize.</p>
+        <p class="readme-em">So many people are quietly lonely.</p>
+        <p>Not because they don't care about others. Not because they don't want friends.</p>
+        <p>But because everyone is waiting.</p>
+        <p>Waiting for someone else to text first. Waiting to be invited. Waiting to feel chosen.</p>
+        <p>And when everyone waits, nothing starts.</p>
+        <p>But you've seen the pattern.</p>
+        <p>Connection almost always begins the same way.</p>
+        <p>One person decides to care a little more. One person sends the message. One person asks the deeper question.</p>
+        <p>And that small moment can change someone's whole week.</p>
+        <p>Sometimes even their life.</p>
+        <p>You know this because you've experienced both sides.</p>
+        <p>You know what it feels like to want deeper connection. And you know how powerful it is when someone reaches out first.</p>
+        <p>Most people don't realize they can be that person.</p>
+        <p>They think connection is something lucky people stumble into.</p>
+        <p>But it's not.</p>
+        <p class="readme-em">Connection is built. And it usually starts with one small act of courage.</p>
+        <p>A message. A question. A moment of honesty.</p>
+        <p>That's why you talk about this.</p>
+        <p>Not because you're trying to sell something.</p>
+        <p>Because you genuinely want people to feel less alone.</p>
+        <p>Because you know how meaningful it is when someone decides to care.</p>
+        <p>Your job today isn't to convince anyone of anything.</p>
+        <p>Your job is to serve the person who is already feeling this.</p>
+        <p>The person who misses their friends but doesn't know how to reach out. The person who wants deeper conversations but doesn't know how to start them. The person who wants more connection but keeps waiting.</p>
+        <p>If even one person hears what you share and decides to send a message, check in on someone, or ask a real question&hellip;</p>
+        <p>then the work matters.</p>
+        <p>So today you show up.</p>
+        <p>You share what you know. You speak honestly about connection.</p>
+        <p>And you trust that the right person will hear it.</p>
+        <p class="readme-em">Because connection isn't something we wait for.</p>
+        <p class="readme-em">It's something we create.</p>
+      </div>
+    </div>
+    <!-- Morning Ritual -->
+    <div class="card">
+      <div class="card-title">Morning Ritual</div>
+      <div id="morning-container"></div>
     </div>
   </div>
 
-  <!-- Morning Ritual -->
-  <div class="card">
-    <div class="card-title">Morning Ritual</div>
-    <div id="morning-container"></div>
-  </div>
-
-  <!-- Keystone Habits -->
-  <div class="card" id="keystone-card">
-    <div class="card-title">Keystone Habits &mdash; Year Map</div>
-    <div id="keystone-container"></div>
-  </div>
-
-  <!-- Daily Business Non-Negotiables -->
-  <div class="card">
-    <div class="card-title">Daily Business Non-Negotiables</div>
-    <div id="business-container"></div>
+  <div class="two-up-row">
+    <!-- Keystone Habits -->
+    <div class="card" id="keystone-card">
+      <div class="card-title">Keystone Habits &mdash; Year Map</div>
+      <div id="keystone-container"></div>
+    </div>
+    <!-- Daily Business Non-Negotiables -->
+    <div class="card">
+      <div class="card-title">Daily Business Non-Negotiables</div>
+      <div id="business-container"></div>
+    </div>
   </div>
 
   <!-- Revenue Tracker -->
-  <div class="card full-width">
+  <div class="card">
     <div class="card-title">Revenue Tracker</div>
     <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">
       <span style="font-size:1.4rem;color:var(--muted);">$</span>
@@ -1108,25 +1119,26 @@ body {
 </section>
 
 <!-- ==================== TAB 2: HABIT TRACKER ==================== -->
-<section id="tab-habits" class="tab-page two-col-layout">
+<section id="tab-habits" class="tab-page">
 
-  <!-- Primary Keystones (synced) -->
-  <div class="card">
-    <div class="card-title">Primary Keystones</div>
-    <div class="card-subtitle">Same data as Dashboard &mdash; changes sync automatically.</div>
-    <div id="keystone-container-sync"></div>
+  <div class="two-up-row">
+    <!-- Primary Keystones (synced) -->
+    <div class="card">
+      <div class="card-title">Primary Keystones</div>
+      <div class="card-subtitle">Same data as Dashboard &mdash; changes sync automatically.</div>
+      <div id="keystone-container-sync"></div>
+    </div>
+    <!-- Household -->
+    <div class="card">
+      <div class="card-title">Household</div>
+      <div id="household-habits-container"></div>
+    </div>
   </div>
 
   <!-- Secondary Fitness -->
   <div class="card">
     <div class="card-title">Secondary Fitness Tracker</div>
-    <div id="secondary-habits-container"></div>
-  </div>
-
-  <!-- Household -->
-  <div class="card">
-    <div class="card-title">Household</div>
-    <div id="household-habits-container"></div>
+    <div id="secondary-habits-container" class="habit-grid-2col"></div>
   </div>
 
 </section>
