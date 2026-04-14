@@ -1654,12 +1654,21 @@ function updateDate() {
    TAB SWITCHING
    ================================================================ */
 function initTabs() {
+  const saved = LS.get('active_tab', 'tab-dashboard');
+  const savedBtn = document.querySelector(`.tab-btn[data-tab="${saved}"]`);
+  if (savedBtn && saved !== 'tab-dashboard') {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
+    savedBtn.classList.add('active');
+    $(saved).classList.add('active');
+  }
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-page').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
       $(btn.dataset.tab).classList.add('active');
+      LS.set('active_tab', btn.dataset.tab);
       // Re-render all habits to sync both tabs
       if (btn.dataset.tab === 'tab-habits' || btn.dataset.tab === 'tab-dashboard') renderAllHabits();
     });
