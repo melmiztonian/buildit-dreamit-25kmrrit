@@ -66,6 +66,7 @@ body {
   margin: 0 auto;
   padding: 20px 24px 0;
   display: flex;
+  justify-content: center;
   gap: 8px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -107,7 +108,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 24px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   transition: box-shadow 0.4s ease;
 }
 .card.section-complete {
@@ -963,6 +964,7 @@ body {
 /* ======== TWO-COLUMN LAYOUTS ======== */
 .two-up-row {
   display: block;
+  margin-bottom: 20px;
 }
 @media (min-width: 900px) {
   .two-up-row {
@@ -973,6 +975,12 @@ body {
   }
   .two-up-row > .card {
     margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .two-up-row > .card > .readme-scroll {
+    flex: 1;
+    max-height: none;
   }
   .habit-grid-2col {
     display: grid;
@@ -1081,17 +1089,16 @@ body {
     </div>
   </div>
 
-  <div class="two-up-row">
-    <!-- Keystone Habits -->
-    <div class="card" id="keystone-card">
-      <div class="card-title">Keystone Habits &mdash; Year Map</div>
-      <div id="keystone-container" class="habit-grid-2col"></div>
-    </div>
-    <!-- Daily Business Non-Negotiables -->
-    <div class="card">
-      <div class="card-title">Daily Business Non-Negotiables</div>
-      <div id="business-container"></div>
-    </div>
+  <!-- Keystone Habits -->
+  <div class="card" id="keystone-card">
+    <div class="card-title">Keystone Habits &mdash; Year Map</div>
+    <div id="keystone-container" class="habit-grid-2col"></div>
+  </div>
+
+  <!-- Daily Business Non-Negotiables -->
+  <div class="card">
+    <div class="card-title">Daily Business Non-Negotiables</div>
+    <div id="business-container" class="habit-grid-2col"></div>
   </div>
 
   <!-- Revenue Tracker -->
