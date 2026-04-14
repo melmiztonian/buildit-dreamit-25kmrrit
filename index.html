@@ -1979,13 +1979,13 @@ function renderHabitBlock(h, container, renderAllFn) {
       inp.min = '0';
       inp.value = weekData[di] || '';
       inp.placeholder = '0';
-      let _debounce;
       inp.addEventListener('input', () => {
         const wd = hGetWeek(h.id);
         wd[di] = parseInt(inp.value) || 0;
         hSetWeek(h.id, wd);
-        clearTimeout(_debounce);
-        _debounce = setTimeout(() => renderAllFn(), 400);
+      });
+      inp.addEventListener('blur', () => {
+        renderAllFn();
       });
       col.appendChild(inp);
     }
