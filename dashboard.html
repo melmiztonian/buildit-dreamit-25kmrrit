@@ -1019,6 +1019,33 @@ body {
 .archive-item .a-title { text-decoration: line-through; }
 .archive-item .a-date { font-size: 0.75rem; margin-left: 8px; }
 
+/* ======== INLINE EDITING ======== */
+[data-editable] {
+  cursor: default;
+  position: relative;
+}
+[data-editable]:hover::after {
+  content: '\270E';
+  font-size: 0.6em;
+  color: var(--sand);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+[data-editable]:focus {
+  outline: none;
+  cursor: text;
+  background: rgba(196, 122, 90, 0.06);
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+[data-editable]:focus::after { content: none; }
+.readme-scroll[data-editable]:focus {
+  padding: 4px 16px 4px 0;
+  margin: 0;
+  border-radius: 8px;
+}
+
 /* ======== TWO-COLUMN LAYOUTS ======== */
 .two-up-row {
   display: block;
@@ -1095,7 +1122,7 @@ body {
 
 <!-- ======== GLOBAL HEADER ======== -->
 <header class="global-header">
-  <h1>Dream it. Build it. $25K MRR it.</h1>
+  <h1 data-editable="site_title">Dream it. Build it. $25K MRR it.</h1>
   <div class="header-meta">
     <span class="header-date" id="header-date"></span>
   </div>
@@ -1103,10 +1130,10 @@ body {
 
 <!-- ======== TAB NAV ======== -->
 <nav class="tab-nav">
-  <button class="tab-btn active" data-tab="tab-dashboard">Dashboard</button>
-  <button class="tab-btn" data-tab="tab-habits">Habit Tracker</button>
-  <button class="tab-btn" data-tab="tab-cal">Cal's Framework</button>
-  <button class="tab-btn" data-tab="tab-library">Grounding Library</button>
+  <button class="tab-btn active" data-tab="tab-dashboard"><span data-editable="tab_dashboard">Dashboard</span></button>
+  <button class="tab-btn" data-tab="tab-habits"><span data-editable="tab_habits">Habit Tracker</span></button>
+  <button class="tab-btn" data-tab="tab-cal"><span data-editable="tab_cal">Cal's Framework</span></button>
+  <button class="tab-btn" data-tab="tab-library"><span data-editable="tab_library">Grounding Library</span></button>
 </nav>
 
 <!-- ======== MAIN CONTENT ======== -->
@@ -1118,8 +1145,8 @@ body {
   <div class="two-up-row readme-row">
     <!-- Read Me -->
     <div class="card readme-card">
-      <div class="card-title">&#10071; READ ME!!</div>
-      <div class="readme-scroll">
+      <div class="card-title" data-editable="title_readme">&#10071; READ ME!!</div>
+      <div class="readme-scroll" data-editable="readme_content">
         <p class="readme-lead">You care deeply about connection.</p>
         <p>Not in a vague way. In a very real, personal way.</p>
         <p>You've spent years paying attention to what actually makes people feel close. What makes friendships last. What makes someone feel seen.</p>
@@ -1159,26 +1186,26 @@ body {
     </div>
     <!-- Morning Ritual -->
     <div class="card">
-      <div class="card-title">Morning Ritual</div>
+      <div class="card-title" data-editable="title_morning">Morning Ritual</div>
       <div id="morning-container"></div>
     </div>
   </div>
 
   <!-- Keystone Habits -->
   <div class="card" id="keystone-card">
-    <div class="card-title">Keystone Habits &mdash; Year Map</div>
+    <div class="card-title" data-editable="title_keystones">Keystone Habits &mdash; Year Map</div>
     <div id="keystone-container" class="habit-grid-2col"></div>
   </div>
 
   <!-- Daily Business Non-Negotiables -->
   <div class="card">
-    <div class="card-title">Daily Business Non-Negotiables</div>
+    <div class="card-title" data-editable="title_business">Daily Business Non-Negotiables</div>
     <div id="business-container" class="habit-grid-2col"></div>
   </div>
 
   <!-- Revenue Tracker -->
   <div class="card">
-    <div class="card-title">Revenue Tracker</div>
+    <div class="card-title" data-editable="title_revenue">Revenue Tracker</div>
     <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">
       <span style="font-size:1.4rem;color:var(--muted);">$</span>
       <input type="text" class="rev-input-big" id="rev-total" placeholder="0">
@@ -1212,20 +1239,20 @@ body {
 
   <!-- Primary Keystones (synced) -->
   <div class="card">
-    <div class="card-title">Primary Keystones</div>
+    <div class="card-title" data-editable="title_keystones_sync">Primary Keystones</div>
     <div class="card-subtitle">Same data as Dashboard &mdash; changes sync automatically.</div>
     <div id="keystone-container-sync" class="habit-grid-2col"></div>
   </div>
 
   <!-- Secondary Fitness -->
   <div class="card">
-    <div class="card-title">Secondary Fitness Tracker</div>
+    <div class="card-title" data-editable="title_secondary">Secondary Fitness Tracker</div>
     <div id="secondary-habits-container" class="habit-grid-2col"></div>
   </div>
 
   <!-- Household -->
   <div class="card half-width">
-    <div class="card-title">Household</div>
+    <div class="card-title" data-editable="title_household">Household</div>
     <div id="household-habits-container"></div>
   </div>
 
@@ -1235,7 +1262,7 @@ body {
 <section id="tab-cal" class="tab-page">
 
   <div class="card">
-    <div class="card-title">The Deep Life Stack &mdash; Cal Newport</div>
+    <div class="card-title" data-editable="title_cal">The Deep Life Stack &mdash; Cal Newport</div>
     <div class="card-subtitle">Every step, in order. Fill it in as you go.</div>
 
     <div class="timeline-bar">
@@ -1366,13 +1393,13 @@ body {
 <section id="tab-library" class="tab-page">
 
   <div class="card">
-    <div class="card-title">What Grounds Me</div>
+    <div class="card-title" data-editable="title_library">What Grounds Me</div>
     <div class="card-subtitle">Books, films, videos that reconnect me to what matters. Always working through one.</div>
   </div>
 
   <!-- Currently Active -->
   <div class="card lib-active-card" id="lib-active-card">
-    <div class="card-title">Currently Active</div>
+    <div class="card-title" data-editable="title_lib_active">Currently Active</div>
     <div id="lib-active-content">
       <p style="color:var(--muted);font-size:0.88rem;">No active item. Add one from the backlog below.</p>
     </div>
@@ -1380,7 +1407,7 @@ body {
 
   <!-- Backlog -->
   <div class="card">
-    <div class="card-title">Backlog</div>
+    <div class="card-title" data-editable="title_lib_backlog">Backlog</div>
     <div id="lib-backlog-list"></div>
     <button class="btn-add" id="lib-add-btn" onclick="toggleAddForm()">+ Add new item</button>
     <div class="add-form" id="lib-add-form">
@@ -1492,6 +1519,29 @@ function getMonday(d) {
   dt.setDate(dt.getDate() + diff);
   dt.setHours(0,0,0,0);
   return dt;
+}
+
+/* ================================================================
+   INLINE EDITING
+   ================================================================ */
+function initEditables() {
+  document.querySelectorAll('[data-editable]').forEach(el => {
+    const key = 'edit_' + el.dataset.editable;
+    const saved = LS.get(key, null);
+    if (saved !== null) el.innerHTML = saved;
+    el.setAttribute('contenteditable', 'true');
+    el.setAttribute('spellcheck', 'false');
+    el.addEventListener('blur', () => {
+      LS.set(key, el.innerHTML);
+    });
+    el.addEventListener('keydown', (e) => {
+      // Prevent Enter from creating new lines in single-line elements (titles, tabs)
+      if (e.key === 'Enter' && !el.classList.contains('readme-scroll')) {
+        e.preventDefault();
+        el.blur();
+      }
+    });
+  });
 }
 
 /* ================================================================
@@ -2335,6 +2385,7 @@ function toggleArchive() {
 function init() {
   updateDate();
   checkDailyReset();
+  initEditables();
   initTabs();
   renderAllHabits();
   initRevenue();
