@@ -992,6 +992,60 @@ body {
 .archive-item .a-title { text-decoration: line-through; }
 .archive-item .a-date { font-size: 0.75rem; margin-left: 8px; }
 
+/* ======== COUNTDOWN BAR ======== */
+.countdown-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.countdown-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.cd-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.cd-num {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--terracotta);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.cd-label {
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-weight: 600;
+}
+.countdown-goal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.countdown-goal label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+.countdown-goal input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+}
+.countdown-goal input:focus { border-color: var(--terracotta); }
+
 /* ======== INLINE EDITING ======== */
 [data-editable] {
   cursor: default;
@@ -1209,6 +1263,15 @@ body {
 
 <!-- ==================== TAB 2: HABIT TRACKER ==================== -->
 <section id="tab-habits" class="tab-page">
+
+  <!-- Countdown Bar -->
+  <div class="card countdown-bar">
+    <div class="countdown-stats" id="countdown-stats"></div>
+    <div class="countdown-goal">
+      <label>Goal date:</label>
+      <input type="date" id="goal-date-input">
+    </div>
+  </div>
 
   <!-- Primary Keystones (synced) -->
   <div class="card">
@@ -1495,6 +1558,65 @@ function getMonday(d) {
 }
 
 /* ================================================================
+   GOAL DATE & COUNTDOWN
+   ================================================================ */
+function getGoalDate() {
+  const saved = LS.get('goal_date', null);
+  if (saved) return saved;
+  // Default: Dec 31 of current year
+  return new Date().getFullYear() + '-12-31';
+}
+
+function countDaysTo(goalStr) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const goal = new Date(goalStr + 'T23:59:59');
+  const goalDay = new Date(goal.getFullYear(), goal.getMonth(), goal.getDate());
+  return Math.max(0, Math.floor((goalDay - today) / 86400000) + 1);
+}
+
+function countWeekdaysTo(goalStr) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const goalDay = new Date(goalStr + 'T12:00:00');
+  let count = 0;
+  const d = new Date(today);
+  while (d <= goalDay) {
+    if (d.getDay() > 0 && d.getDay() < 6) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
+function countWeeksTo(goalStr) {
+  const days = countDaysTo(goalStr);
+  return Math.ceil(days / 7);
+}
+
+function initCountdown() {
+  const inp = $('goal-date-input');
+  inp.value = getGoalDate();
+  inp.addEventListener('change', () => {
+    LS.set('goal_date', inp.value);
+    renderCountdown();
+    renderAllHabits();
+  });
+  renderCountdown();
+}
+
+function renderCountdown() {
+  const goalStr = getGoalDate();
+  const days = countDaysTo(goalStr);
+  const weekdays = countWeekdaysTo(goalStr);
+  const weeks = countWeeksTo(goalStr);
+  $('countdown-stats').innerHTML = `
+    <div class="cd-stat"><span class="cd-num">${days}</span><span class="cd-label">days left</span></div>
+    <div class="cd-stat"><span class="cd-num">${weekdays}</span><span class="cd-label">weekdays</span></div>
+    <div class="cd-stat"><span class="cd-num">${weeks}</span><span class="cd-label">weeks</span></div>
+  `;
+}
+
+/* ================================================================
    INLINE EDITING
    ================================================================ */
 function initEditables() {
@@ -1759,10 +1881,11 @@ function renderHabitBlock(h, container, renderAllFn) {
   const startCount = hGetStart(h.id);
   const yearTotal = rawYearTotal + startCount;
 
-  // Remaining & pace
+  // Remaining & pace (based on goal date)
+  const goalStr = getGoalDate();
   const remaining = Math.max(0, h.yearGoal - yearTotal);
-  const dayOfYear = Math.floor((now - new Date(yr, 0, 1)) / 86400000) + 1;
-  const weeksLeft = Math.max(1, Math.ceil((365 - dayOfYear) / 7));
+  const daysLeft = countDaysTo(goalStr);
+  const weeksLeft = Math.max(1, Math.ceil(daysLeft / 7));
   const pacePerWeek = remaining > 0 ? Math.ceil(remaining / weeksLeft) : 0;
 
   // Header
@@ -2398,6 +2521,7 @@ function init() {
   updateDate();
   checkDailyReset();
   initEditables();
+  initCountdown();
   initTabs();
   renderAllHabits();
   initRevenue();

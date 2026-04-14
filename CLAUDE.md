@@ -134,6 +134,8 @@ Each `.habit-block` is a visually distinct sub-card inside a `.card`:
 
 ## Tab 2: Habit Tracker
 
+**Countdown Bar** — shows days remaining, weekdays remaining, and weeks remaining until the goal date. Editable goal date input (defaults to Dec 31 of current year, saved to localStorage as `goal_date`). All habit pace calculations use this goal date.
+
 **Primary Keystones** — same 3 habits from Tab 1, fully synced (same `renderAllHabits()` call).
 
 **Secondary Fitness Tracker** — 9 habits using the same unified system (see below).
@@ -151,18 +153,19 @@ ALL habits (morning + keystones + business + secondary + household) use identica
 Groups: `morning`, `keystone`, `business`, `secondary`, `household`. Each renders into its own container via `renderGroupInto()`.
 
 Each habit block shows:
-- **Header**: emoji + name + weekly target + year count / year goal (tabular-nums pill badge) + delete button (x, visible on hover)
+- **Header**: emoji + name + weekly target + year count / year goal (tabular-nums pill badge)
 - **Week grid**: `grid-template-columns: repeat(7, 1fr)` — day name, date number, and check/input per day. Fully responsive.
 - **Stats row**: Week total/target, month total, year total/goal as colored pill badges (tabular-nums) + "Show details" toggle
-- **Pace line**: remaining to hit yearly goal + required weekly pace for remaining weeks
+- **Pace line**: two lines — remaining to hit yearly goal, then weekly pace needed
 - **Starting count**: editable offset for year total (for mid-year start)
-- **Detail panel** (toggleable, hidden by default) with 2 tabbed views:
+- **Action pills**: Delete, Edit, Show Details — three pill buttons in a row below starting count
+- **Detail panel** (toggleable via Show Details pill, hidden by default) with 2 tabbed views:
   - **Month view**: Centered calendar grid with day numbers + weekly breakdown bars with labels
   - **Year view**: Centered 12-month grid (4 columns), each month is a mini-calendar with S/M/T/W/T/F/S headers and day numbers. Clickable for check-type habits. Today highlighted.
 
 ### Add/Delete Habits
-- **Edit**: hover over any habit block to reveal a pencil button in header. Opens an inline form (same fields as add) pre-filled with current values. For default habits, saves an edited copy (original ID preserved so data carries over). For custom habits, updates in-place.
-- **Delete**: hover over any habit block to reveal x button in header. Deleting a default habit adds its ID to `habits_custom.deleted`. Deleting a custom habit removes it from `habits_custom.added`.
+- **Edit**: click the Edit pill button. Opens an inline form (same fields as add) pre-filled with current values. For default habits, saves an edited copy (original ID preserved so data carries over). For custom habits, updates in-place.
+- **Delete**: click the Delete pill button. Deleting a default habit adds its ID to `habits_custom.deleted`. Deleting a custom habit removes it from `habits_custom.added`.
 - **Add**: "+ Add habit" button below each group opens an inline form (name, emoji, type, weekly target, year goal, unit). Creates a new habit with ID `custom_` + timestamp.
 - Storage: `habits_custom` in localStorage: `{ added: [...habit objects], deleted: ['id1', ...] }`
 - `getActiveHabits()` merges defaults (minus deleted) with added customs.
