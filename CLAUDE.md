@@ -89,7 +89,10 @@ Each `.habit-block` is a visually distinct sub-card inside a `.card`:
 ## Layout
 
 **Horizontal tab bar** at top (no sidebar). Max-width 1400px centered.
-**Two-up rows** (`.two-up-row`) pair cards side by side at 900px+ (stacks on mobile). Dashboard: READ ME + Morning Ritual, then Keystones + Business. Habit Tracker: Keystones + Household side by side, Secondary Fitness uses `.habit-grid-2col` for 2-col habit blocks inside the card.
+**Tab pills** — rounded pill buttons (24px radius, border, terracotta fill when active).
+**Two-up rows** (`.two-up-row`) pair cards side by side at 900px+ with `align-items: stretch` (equal height, stacks on mobile). Dashboard: READ ME + Morning Ritual, then Keystones + Business.
+**2-col habit grids** (`.habit-grid-2col`) — keystone containers and secondary fitness use 2-col grid for habit blocks inside their cards. Add button/form spans both columns.
+**Half-width** (`.half-width`) — Household card is 50% width on desktop, below Secondary Fitness.
 **Global header** — title + auto-updating date (no priority field).
 **Tab navigation** — 4 tabs, only one `.tab-page` is `.active` at a time.
 **Responsive** — breakpoints at 768px (tablet) and 480px (mobile). Tabs scroll horizontally on small screens, cards go full-width, grids stack.

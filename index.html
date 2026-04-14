@@ -62,31 +62,32 @@ body {
 
 /* ======== TAB NAV ======== */
 .tab-nav {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 20px 24px 0;
   display: flex;
-  gap: 4px;
+  gap: 8px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 .tab-btn {
-  padding: 10px 20px;
-  border: none;
-  background: transparent;
+  padding: 8px 20px;
+  border: 1.5px solid var(--border);
+  border-radius: 24px;
+  background: var(--card);
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 500;
   color: var(--muted);
   cursor: pointer;
-  border-bottom: 2px solid transparent;
   transition: all 0.2s;
   white-space: nowrap;
 }
-.tab-btn:hover { color: var(--terracotta); }
+.tab-btn:hover { border-color: var(--terracotta); color: var(--terracotta); }
 .tab-btn.active {
-  color: var(--terracotta);
-  border-bottom-color: var(--terracotta);
+  background: var(--terracotta);
+  border-color: var(--terracotta);
+  color: #fff;
   font-weight: 600;
 }
 
@@ -968,7 +969,10 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
-    align-items: start;
+    align-items: stretch;
+  }
+  .two-up-row > .card {
+    margin-bottom: 0;
   }
   .habit-grid-2col {
     display: grid;
@@ -978,6 +982,9 @@ body {
   .habit-grid-2col > .habit-add-btn,
   .habit-grid-2col > .habit-add-form {
     grid-column: 1 / -1;
+  }
+  .half-width {
+    max-width: 50%;
   }
 }
 
@@ -1028,7 +1035,7 @@ body {
   <div class="two-up-row">
     <!-- Read Me -->
     <div class="card">
-      <div class="card-title">READ ME!!</div>
+      <div class="card-title">&#10071; READ ME!!</div>
       <div class="readme-scroll">
         <p class="readme-lead">You care deeply about connection.</p>
         <p>Not in a vague way. In a very real, personal way.</p>
@@ -1078,7 +1085,7 @@ body {
     <!-- Keystone Habits -->
     <div class="card" id="keystone-card">
       <div class="card-title">Keystone Habits &mdash; Year Map</div>
-      <div id="keystone-container"></div>
+      <div id="keystone-container" class="habit-grid-2col"></div>
     </div>
     <!-- Daily Business Non-Negotiables -->
     <div class="card">
@@ -1121,24 +1128,23 @@ body {
 <!-- ==================== TAB 2: HABIT TRACKER ==================== -->
 <section id="tab-habits" class="tab-page">
 
-  <div class="two-up-row">
-    <!-- Primary Keystones (synced) -->
-    <div class="card">
-      <div class="card-title">Primary Keystones</div>
-      <div class="card-subtitle">Same data as Dashboard &mdash; changes sync automatically.</div>
-      <div id="keystone-container-sync"></div>
-    </div>
-    <!-- Household -->
-    <div class="card">
-      <div class="card-title">Household</div>
-      <div id="household-habits-container"></div>
-    </div>
+  <!-- Primary Keystones (synced) -->
+  <div class="card">
+    <div class="card-title">Primary Keystones</div>
+    <div class="card-subtitle">Same data as Dashboard &mdash; changes sync automatically.</div>
+    <div id="keystone-container-sync" class="habit-grid-2col"></div>
   </div>
 
   <!-- Secondary Fitness -->
   <div class="card">
     <div class="card-title">Secondary Fitness Tracker</div>
     <div id="secondary-habits-container" class="habit-grid-2col"></div>
+  </div>
+
+  <!-- Household -->
+  <div class="card half-width">
+    <div class="card-title">Household</div>
+    <div id="household-habits-container"></div>
   </div>
 
 </section>
