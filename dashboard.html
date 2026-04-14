@@ -978,9 +978,26 @@ body {
     display: flex;
     flex-direction: column;
   }
-  .two-up-row > .card > .readme-scroll {
+  /* Read Me card: position absolute so Morning Ritual drives the row height */
+  .two-up-row.readme-row {
+    position: relative;
+  }
+  .two-up-row.readme-row > .card.readme-card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(50% - 10px);
+    height: 100%;
+    overflow: hidden;
+  }
+  .two-up-row.readme-row > .card:not(.readme-card) {
+    grid-column: 2;
+  }
+  .two-up-row.readme-row > .card.readme-card > .readme-scroll {
     flex: 1;
     max-height: none;
+    min-height: 0;
+    overflow-y: auto;
   }
   .habit-grid-2col {
     display: grid;
@@ -1040,9 +1057,9 @@ body {
 <!-- ==================== TAB 1: DASHBOARD ==================== -->
 <section id="tab-dashboard" class="tab-page active">
 
-  <div class="two-up-row">
+  <div class="two-up-row readme-row">
     <!-- Read Me -->
-    <div class="card">
+    <div class="card readme-card">
       <div class="card-title">&#10071; READ ME!!</div>
       <div class="readme-scroll">
         <p class="readme-lead">You care deeply about connection.</p>
