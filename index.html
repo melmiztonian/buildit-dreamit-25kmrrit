@@ -1657,12 +1657,16 @@ function hToggleDay(id, type, dateStr) {
 }
 
 // ---- Habit customization (add/delete) ----
-function getHabitsCustom() { return LS.get('habits_custom', { added: [], deleted: [] }); }
+function getHabitsCustom() { return LS.get('habits_custom', { added: [], deleted: [], edits: {} }); }
 function setHabitsCustom(c) { LS.set('habits_custom', c); }
 
 function getActiveHabits() {
   const custom = getHabitsCustom();
-  const base = ALL_HABITS.filter(h => !custom.deleted.includes(h.id));
+  if (!custom.edits) custom.edits = {};
+  // Apply edits to defaults in-place, filter deleted, then append added
+  const base = ALL_HABITS
+    .filter(h => !custom.deleted.includes(h.id))
+    .map(h => custom.edits[h.id] ? { ...h, ...custom.edits[h.id] } : h);
   return base.concat(custom.added);
 }
 
@@ -1682,17 +1686,14 @@ function deleteHabit(id) {
 
 function saveHabitEdit(id, group, fields) {
   const custom = getHabitsCustom();
+  if (!custom.edits) custom.edits = {};
   // Check if it's a custom habit
   const addedIdx = custom.added.findIndex(h => h.id === id);
   if (addedIdx !== -1) {
-    // Update in-place
     Object.assign(custom.added[addedIdx], fields);
   } else {
-    // It's a default habit — "delete" the original and add an edited copy
-    if (!custom.deleted.includes(id)) custom.deleted.push(id);
-    // Remove any previous edit of this default
-    custom.added = custom.added.filter(h => h.id !== id);
-    custom.added.push({ id, group, ...fields });
+    // Default habit — store as override, preserves order
+    custom.edits[id] = fields;
   }
   setHabitsCustom(custom);
   if (habitUIState[id]) habitUIState[id].editing = false;
