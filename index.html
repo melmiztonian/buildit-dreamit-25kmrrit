@@ -1874,12 +1874,25 @@ function renderHabitBlock(h, container, renderAllFn) {
     const behind = expectedByNow - yearTotal;
     const stillNeededThisWeek = Math.max(0, pacePerWeek - weekTotal);
     const endOfWeekTarget = Math.max(0, h.yearGoal - ((weeksLeft - 1) * h.weekTarget));
-    let lines = `<strong>${remaining}</strong> remaining to hit yearly goal<br>Need <strong>${pacePerWeek}</strong>/week for ${weeksLeft} weeks`;
-    lines += `<br>End-of-week target: <strong>${endOfWeekTarget}</strong> total (need <strong>${Math.max(0, endOfWeekTarget - yearTotal)}</strong> more this week)`;
+    const moreThisWeek = Math.max(0, endOfWeekTarget - yearTotal);
+    let lines = `<strong>${remaining}</strong> remaining to hit yearly goal`;
+    lines += `<br>End-of-week target: <strong>${endOfWeekTarget}</strong> total (need <strong>${moreThisWeek}</strong> more this week)`;
     if (behind > 0) {
       lines += `<br><span style="color:var(--terracotta);">Behind by <strong>${behind}</strong></span>`;
     } else {
       lines += `<br><span style="color:var(--sage);">On track! <strong>${Math.abs(behind)}</strong> ahead of pace</span>`;
+    }
+    // Action plan: catch up over 5 or 10 weeks (or show steady pace)
+    lines += `<br><span style="font-weight:600;color:var(--text);margin-top:4px;display:inline-block;">Action plan:</span>`;
+    if (behind > 0) {
+      [5, 10].forEach(w => {
+        const sprintWeeks = Math.min(w, weeksLeft);
+        // Spread the deficit over sprintWeeks on top of the normal weekly target
+        const boostPerWeek = h.weekTarget + Math.ceil(behind / sprintWeeks);
+        lines += `<br>Do <strong>${boostPerWeek}</strong>/week for <strong>${sprintWeeks}</strong> weeks, then <strong>${h.weekTarget}</strong>/week after`;
+      });
+    } else {
+      lines += `<br>Steady at <strong>${h.weekTarget}</strong>/week &mdash; you're on pace`;
     }
     pace.innerHTML = lines;
   } else {
