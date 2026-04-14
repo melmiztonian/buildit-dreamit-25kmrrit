@@ -1604,8 +1604,8 @@ function renderHabitBlock(h, container, renderAllFn) {
     <div>
       <span class="habit-block-name">${h.emoji} ${h.name}</span><br>
       <span class="habit-block-target">${h.weekTarget} ${h.unit}</span>
+      <span class="habit-block-count">${yearTotal} / ${h.yearGoal} this year</span>
     </div>
-    <span class="habit-block-count">${yearTotal} / ${h.yearGoal} this year</span>
   `;
   const delBtn = document.createElement('button');
   delBtn.className = 'habit-delete-btn';
