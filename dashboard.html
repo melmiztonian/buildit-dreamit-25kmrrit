@@ -1817,7 +1817,8 @@ function renderHabitBlock(h, container, renderAllFn) {
   }
 
   // Week input grid with dates
-  const weekStart = new Date(getWeekStart(today));
+  const weekStartStr = getWeekStart(today);
+  const weekStart = new Date(weekStartStr + 'T12:00:00');
   const dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const weekGrid = document.createElement('div');
   weekGrid.className = 'habit-week-grid';
