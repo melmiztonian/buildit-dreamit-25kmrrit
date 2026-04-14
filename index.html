@@ -343,21 +343,6 @@ body {
   width: 14px;
   text-align: center;
 }
-.habit-detail-toggle {
-  padding: 5px 14px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  background: transparent;
-  font-family: inherit;
-  font-size: 0.72rem;
-  color: var(--muted);
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-left: auto;
-  white-space: nowrap;
-}
-.habit-detail-toggle:hover { border-color: var(--terracotta); color: var(--terracotta); }
-.habit-detail-toggle.active { background: var(--terracotta); color: #fff; border-color: var(--terracotta); }
 /* Pace/remaining — card style */
 .habit-pace {
   font-size: 0.78rem;
@@ -687,45 +672,28 @@ body {
 }
 
 /* ======== HABIT MANAGEMENT (add/delete) ======== */
-.habit-delete-btn {
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: transparent;
-  color: var(--sand);
-  font-size: 1rem;
-  cursor: pointer;
+/* Action pills row */
+.habit-actions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s;
-  margin-left: 8px;
-  flex-shrink: 0;
-  opacity: 0;
+  gap: 8px;
+  margin-top: 8px;
 }
-.habit-edit-btn {
-  width: 24px;
-  height: 24px;
-  border: none;
+.habit-action-pill {
+  padding: 5px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
   background: transparent;
-  color: var(--sand);
-  font-size: 0.8rem;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--muted);
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
   transition: all 0.2s;
-  flex-shrink: 0;
-  opacity: 0;
 }
-.habit-block:hover .habit-delete-btn,
-.habit-block:hover .habit-edit-btn,
-.habit-delete-btn:focus,
-.habit-edit-btn:focus { opacity: 1; }
-.habit-delete-btn:hover { background: rgba(192,57,43,0.1); color: #c0392b; }
-.habit-edit-btn:hover { background: rgba(196,122,90,0.1); color: var(--terracotta); }
+.habit-action-pill:hover { border-color: var(--terracotta); color: var(--terracotta); }
+.habit-action-pill.active { background: var(--terracotta); color: #fff; border-color: var(--terracotta); }
+.habit-action-pill.danger:hover { border-color: #c0392b; color: #c0392b; }
+
 .habit-edit-form {
   background: var(--card);
   border: 1px solid var(--border);
@@ -1789,23 +1757,6 @@ function renderHabitBlock(h, container, renderAllFn) {
       <span class="habit-block-count">${yearTotal} / ${h.yearGoal} this year</span>
     </div>
   `;
-  const editBtn = document.createElement('button');
-  editBtn.className = 'habit-edit-btn';
-  editBtn.title = 'Edit habit';
-  editBtn.textContent = '\u270E';
-  editBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    habitUIState[h.id] = habitUIState[h.id] || {};
-    habitUIState[h.id].editing = !habitUIState[h.id].editing;
-    renderAllHabits();
-  });
-  const delBtn = document.createElement('button');
-  delBtn.className = 'habit-delete-btn';
-  delBtn.title = 'Remove habit';
-  delBtn.textContent = '\u00D7';
-  delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteHabit(h.id); });
-  hdr.appendChild(editBtn);
-  hdr.appendChild(delBtn);
   block.appendChild(hdr);
 
   // Edit form (if editing)
@@ -1907,21 +1858,13 @@ function renderHabitBlock(h, container, renderAllFn) {
     <span class="hs-badge month">Month: <strong>${monthTotal}</strong></span>
     <span class="hs-badge year">Year: <strong>${yearTotal}</strong>/${h.yearGoal}</span>
   `;
-  const toggleBtn = document.createElement('button');
-  toggleBtn.className = 'habit-detail-toggle' + (ui.detailOpen ? ' active' : '');
-  toggleBtn.textContent = ui.detailOpen ? 'Hide details' : 'Show details';
-  toggleBtn.addEventListener('click', () => {
-    ui.detailOpen = !ui.detailOpen;
-    renderAllFn();
-  });
-  stats.appendChild(toggleBtn);
   block.appendChild(stats);
 
-  // Pace info
+  // Pace info (two lines)
   const pace = document.createElement('div');
   pace.className = 'habit-pace';
   if (remaining > 0) {
-    pace.innerHTML = `<strong>${remaining}</strong> remaining to hit yearly goal &middot; Need <strong>${pacePerWeek}</strong>/week for ${weeksLeft} weeks`;
+    pace.innerHTML = `<strong>${remaining}</strong> remaining to hit yearly goal<br>Need <strong>${pacePerWeek}</strong>/week for ${weeksLeft} weeks`;
   } else {
     pace.innerHTML = `<strong>Year goal reached!</strong> \uD83C\uDF89`;
   }
@@ -1940,6 +1883,27 @@ function renderHabitBlock(h, container, renderAllFn) {
     renderAllFn();
   });
   block.appendChild(metaRow);
+
+  // Action pills row: Delete, Edit, Show Details
+  const actions = document.createElement('div');
+  actions.className = 'habit-actions';
+  const makeActionBtn = (label, cls, onClick) => {
+    const b = document.createElement('button');
+    b.className = 'habit-action-pill ' + cls;
+    b.textContent = label;
+    b.addEventListener('click', onClick);
+    return b;
+  };
+  actions.appendChild(makeActionBtn('Delete', 'danger', () => deleteHabit(h.id)));
+  actions.appendChild(makeActionBtn('Edit', '', () => {
+    ui.editing = !ui.editing;
+    renderAllFn();
+  }));
+  actions.appendChild(makeActionBtn(ui.detailOpen ? 'Hide Details' : 'Show Details', ui.detailOpen ? 'active' : '', () => {
+    ui.detailOpen = !ui.detailOpen;
+    renderAllFn();
+  }));
+  block.appendChild(actions);
 
   // Detail panel (toggleable)
   if (ui.detailOpen) {
