@@ -2117,9 +2117,13 @@ function renderHabitBlock(h, container, renderAllFn) {
     ui.detailOpen = !ui.detailOpen;
     renderAllFn();
   }));
-  // Sharon: add Copy Template + Edit Template pills on same row after actions
+  block.appendChild(actions);
+
+  // Sharon: Copy Template + Edit Template on their own row
   if (h.id === 'biz_sharon') {
     const defaultTpl = 'Yesterday:\n- \n\nToday:\n- EAT THAT FROG: \n-\n\nWins:\n- \n\nBlockers:\n- ';
+    const tplActions = document.createElement('div');
+    tplActions.className = 'habit-actions';
     const copyBtn = makeActionBtn('Copy Template', '', () => {
       const tpl = LS.get('sharon_template', defaultTpl);
       navigator.clipboard.writeText(tpl).then(() => {
@@ -2131,13 +2135,6 @@ function renderHabitBlock(h, container, renderAllFn) {
       ui.editingTemplate = !ui.editingTemplate;
       renderAllFn();
     });
-  }
-  block.appendChild(actions);
-
-  // Sharon: Copy Template + Edit Template on their own row
-  if (h.id === 'biz_sharon') {
-    const tplActions = document.createElement('div');
-    tplActions.className = 'habit-actions';
     tplActions.appendChild(copyBtn);
     tplActions.appendChild(editTplBtn);
     block.appendChild(tplActions);
