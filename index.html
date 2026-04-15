@@ -1540,13 +1540,17 @@ async function syncFromSupabase() {
     }
   } catch { /* offline — use localStorage */ }
 }
-function todayStr() { return new Date().toISOString().slice(0, 10); }
+function localDateStr(dt) {
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, '0');
+  const d = String(dt.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + d;
+}
+function todayStr() { return localDateStr(new Date()); }
 function getWeekStart(d) {
-  const dt = new Date(d);
-  const day = dt.getDay(); // 0=Sun
-  dt.setDate(dt.getDate() - day);
-  dt.setHours(0,0,0,0);
-  return dt.toISOString().slice(0,10);
+  const dt = new Date(d + 'T12:00:00');
+  dt.setDate(dt.getDate() - dt.getDay());
+  return localDateStr(dt);
 }
 function getMonday(d) {
   const dt = new Date(d);
@@ -1749,7 +1753,7 @@ function hMonthTotal(id, type) {
   const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   for (let d = 1; d <= dim; d++) {
     const dt = new Date(now.getFullYear(), now.getMonth(), d);
-    const ws = getWeekStart(dt.toISOString().slice(0,10));
+    const ws = getWeekStart(localDateStr(dt));
     const di = dt.getDay();
     const wd = LS.get('habit_' + id + '_' + ws, Array(7).fill(0));
     if (type === 'check') { if (wd[di] === 1 || wd[di] === true) total++; }
@@ -1764,7 +1768,7 @@ function hYearTotal(id, type) {
   const days = Math.floor((new Date(yr, 11, 31) - jan1) / 86400000) + 1;
   for (let d = 0; d < days; d++) {
     const dt = new Date(yr, 0, 1 + d);
-    const ws = getWeekStart(dt.toISOString().slice(0,10));
+    const ws = getWeekStart(localDateStr(dt));
     const di = dt.getDay();
     const wd = LS.get('habit_' + id + '_' + ws, Array(7).fill(0));
     if (type === 'check') { if (wd[di] === 1 || wd[di] === true) total++; }
@@ -2128,7 +2132,7 @@ function renderHabitBlock(h, container, renderAllFn) {
       }
       for (let d = 1; d <= dim; d++) {
         const dt = new Date(yr, now.getMonth(), d);
-        const ds = dt.toISOString().slice(0,10);
+        const ds = localDateStr(dt);
         const filled = hDayFilled(h.id, h.type, ds);
         const cell = document.createElement('div');
         cell.className = 'month-cal-cell' + (filled ? ' filled' : '') + (ds === today ? ' today' : '');
@@ -2154,7 +2158,7 @@ function renderHabitBlock(h, container, renderAllFn) {
         const ws = new Date(monthStart);
         ws.setDate(ws.getDate() + w * 7);
         if (ws.getMonth() !== now.getMonth() && w > 0) break;
-        const wsStr = getWeekStart(ws.toISOString().slice(0,10));
+        const wsStr = getWeekStart(localDateStr(ws));
         const wd = LS.get('habit_' + h.id + '_' + wsStr, Array(7).fill(0));
         let wt = h.type === 'check'
           ? wd.filter(v => v === 1 || v === true).length
@@ -2208,7 +2212,7 @@ function renderHabitBlock(h, container, renderAllFn) {
         }
         for (let d = 1; d <= dim; d++) {
           const dt = new Date(yr, mi, d);
-          const ds = dt.toISOString().slice(0,10);
+          const ds = localDateStr(dt);
           const filled = hDayFilled(h.id, h.type, ds);
           const cell = document.createElement('div');
           cell.className = 'ym-cell' + (filled ? ' filled' : '') + (ds === today ? ' today' : '');
