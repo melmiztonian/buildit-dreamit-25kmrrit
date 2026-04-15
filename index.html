@@ -2289,6 +2289,21 @@ function renderAllHabits() {
   renderGroupInto('keystone-container-sync', 'keystone');
   // Business non-negotiables (dashboard)
   renderGroupInto('business-container', 'business');
+  // Insert synced ks_content as second item in business container
+  const bizC = $('business-container');
+  if (bizC) {
+    const ksContent = getActiveHabits().find(h => h.id === 'ks_content');
+    if (ksContent) {
+      const placeholder = document.createElement('div');
+      renderHabitBlock(ksContent, placeholder, renderAllHabits);
+      const rendered = placeholder.firstChild;
+      // Insert after first habit block (Sharon) and before the second
+      const blocks = bizC.querySelectorAll('.habit-block');
+      if (blocks.length >= 1) {
+        bizC.insertBefore(rendered, blocks[1] || bizC.querySelector('.habit-add-btn'));
+      }
+    }
+  }
   // Secondary (habits tab)
   renderGroupInto('secondary-habits-container', 'secondary');
   // Household (habits tab)
