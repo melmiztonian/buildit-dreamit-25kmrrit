@@ -1159,6 +1159,7 @@ body {
 <nav class="tab-nav">
   <button class="tab-btn active" data-tab="tab-dashboard">Dashboard</button>
   <button class="tab-btn" data-tab="tab-habits">Habit Tracker</button>
+  <button class="tab-btn" data-tab="tab-business">Building the Dream</button>
   <button class="tab-btn" data-tab="tab-cal">Cal's Framework</button>
   <button class="tab-btn" data-tab="tab-library">Grounding Library</button>
 </nav>
@@ -1222,12 +1223,6 @@ body {
   <div class="card" id="keystone-card">
     <div class="card-title" data-editable="title_keystones">Keystone Habits &mdash; Year Map</div>
     <div id="keystone-container" class="habit-grid-2col"></div>
-  </div>
-
-  <!-- Daily Business Non-Negotiables -->
-  <div class="card">
-    <div class="card-title" data-editable="title_business">Daily Business Non-Negotiables</div>
-    <div id="business-container" class="habit-grid-2col"></div>
   </div>
 
   <!-- Revenue Tracker -->
@@ -1294,7 +1289,17 @@ body {
 
 </section>
 
-<!-- ==================== TAB 3: CAL'S FRAMEWORK ==================== -->
+<!-- ==================== TAB 3: BUILDING THE DREAM ==================== -->
+<section id="tab-business" class="tab-page">
+
+  <div class="card">
+    <div class="card-title" data-editable="title_business">Daily Business Non-Negotiables</div>
+    <div id="business-container" class="habit-grid-2col"></div>
+  </div>
+
+</section>
+
+<!-- ==================== TAB 4: CAL'S FRAMEWORK ==================== -->
 <section id="tab-cal" class="tab-page">
 
   <div class="card">
@@ -1674,7 +1679,7 @@ function initTabs() {
       $(btn.dataset.tab).classList.add('active');
       LS.set('active_tab', btn.dataset.tab);
       // Re-render all habits to sync both tabs
-      if (btn.dataset.tab === 'tab-habits' || btn.dataset.tab === 'tab-dashboard') renderAllHabits();
+      if (btn.dataset.tab === 'tab-habits' || btn.dataset.tab === 'tab-dashboard' || btn.dataset.tab === 'tab-business') renderAllHabits();
     });
   });
 }
