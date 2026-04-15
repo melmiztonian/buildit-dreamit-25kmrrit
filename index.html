@@ -2117,10 +2117,27 @@ function renderHabitBlock(h, container, renderAllFn) {
     ui.detailOpen = !ui.detailOpen;
     renderAllFn();
   }));
+  // Sharon: add Copy Template + Edit Template pills on same row after actions
+  if (h.id === 'biz_sharon') {
+    const defaultTpl = 'Yesterday:\n- \n\nToday:\n- EAT THAT FROG: \n-\n\nWins:\n- \n\nBlockers:\n- ';
+    const copyBtn = makeActionBtn('Copy Template', '', () => {
+      const tpl = LS.get('sharon_template', defaultTpl);
+      navigator.clipboard.writeText(tpl).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy Template'; }, 1500);
+      });
+    });
+    const editTplBtn = makeActionBtn(ui.editingTemplate ? 'Hide Template' : 'Edit Template', ui.editingTemplate ? 'active' : '', () => {
+      ui.editingTemplate = !ui.editingTemplate;
+      renderAllFn();
+    });
+    actions.appendChild(copyBtn);
+    actions.appendChild(editTplBtn);
+  }
   block.appendChild(actions);
 
-  // Sharon template copy button
-  if (h.id === 'biz_sharon') {
+  // Sharon template textarea (only visible when Edit Template is active)
+  if (h.id === 'biz_sharon' && ui.editingTemplate) {
     const defaultTpl = 'Yesterday:\n- \n\nToday:\n- EAT THAT FROG: \n-\n\nWins:\n- \n\nBlockers:\n- ';
     const tplWrap = document.createElement('div');
     tplWrap.className = 'sharon-tpl';
@@ -2129,17 +2146,7 @@ function renderHabitBlock(h, container, renderAllFn) {
     tplText.value = LS.get('sharon_template', defaultTpl);
     tplText.rows = 10;
     tplText.addEventListener('blur', () => LS.set('sharon_template', tplText.value));
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'habit-action-pill';
-    copyBtn.textContent = 'Copy template';
-    copyBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(tplText.value).then(() => {
-        copyBtn.textContent = 'Copied!';
-        setTimeout(() => { copyBtn.textContent = 'Copy template'; }, 1500);
-      });
-    });
     tplWrap.appendChild(tplText);
-    tplWrap.appendChild(copyBtn);
     block.appendChild(tplWrap);
   }
 
