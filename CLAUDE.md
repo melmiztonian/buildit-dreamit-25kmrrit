@@ -22,8 +22,9 @@ CLAUDE.md        ← this file — update after every dashboard.html change
 - **Project URL:** `https://ingvjqyqoqggskkrklhk.supabase.co`
 - **Anon key:** hardcoded in `<script>` as `SB_KEY`
 - **Table:** `dashboard_state` (key TEXT PK, value JSONB, updated_at TIMESTAMPTZ)
-- **How it works:** `LS.set()` writes to both localStorage (instant) and Supabase (batched every 500ms). On page load, `syncFromSupabase()` pulls all remote state and re-renders if anything changed.
-- **Offline-safe:** if Supabase is unreachable, localStorage works as fallback.
+- **How it works:** `LS.set()` writes to localStorage (instant) + stores a local timestamp (`_ts_{key}`) + queues a Supabase write (batched every 500ms with the timestamp). On page load, `syncFromSupabase()` does two-way merge: remote values newer than local are accepted, local values newer than remote are pushed. New local keys not yet in Supabase are also pushed.
+- **Conflict resolution:** per-key, timestamp-based, last-write-wins with comparison. No data is overwritten by stale values from another device.
+- **Offline-safe:** if Supabase is unreachable, localStorage works as fallback. Local timestamps ensure correct merge on next sync.
 
 ---
 
