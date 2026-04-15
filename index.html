@@ -992,6 +992,29 @@ body {
 .archive-item .a-title { text-decoration: line-through; }
 .archive-item .a-date { font-size: 0.75rem; margin-left: 8px; }
 
+/* ======== SHARON TEMPLATE ======== */
+.sharon-tpl {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.sharon-tpl-text {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: var(--text);
+  background: var(--card);
+  outline: none;
+  resize: vertical;
+  line-height: 1.6;
+}
+.sharon-tpl-text:focus { border-color: var(--terracotta); }
+
 /* ======== COUNTDOWN BAR ======== */
 .countdown-bar {
   display: flex;
@@ -2095,6 +2118,30 @@ function renderHabitBlock(h, container, renderAllFn) {
     renderAllFn();
   }));
   block.appendChild(actions);
+
+  // Sharon template copy button
+  if (h.id === 'biz_sharon') {
+    const defaultTpl = 'Yesterday:\n- \n\nToday:\n- EAT THAT FROG: \n-\n\nWins:\n- \n\nBlockers:\n- ';
+    const tplWrap = document.createElement('div');
+    tplWrap.className = 'sharon-tpl';
+    const tplText = document.createElement('textarea');
+    tplText.className = 'sharon-tpl-text';
+    tplText.value = LS.get('sharon_template', defaultTpl);
+    tplText.rows = 10;
+    tplText.addEventListener('blur', () => LS.set('sharon_template', tplText.value));
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'habit-action-pill';
+    copyBtn.textContent = 'Copy template';
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(tplText.value).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy template'; }, 1500);
+      });
+    });
+    tplWrap.appendChild(tplText);
+    tplWrap.appendChild(copyBtn);
+    block.appendChild(tplWrap);
+  }
 
   // Detail panel (toggleable)
   if (ui.detailOpen) {
