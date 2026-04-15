@@ -2131,10 +2131,17 @@ function renderHabitBlock(h, container, renderAllFn) {
       ui.editingTemplate = !ui.editingTemplate;
       renderAllFn();
     });
-    actions.appendChild(copyBtn);
-    actions.appendChild(editTplBtn);
   }
   block.appendChild(actions);
+
+  // Sharon: Copy Template + Edit Template on their own row
+  if (h.id === 'biz_sharon') {
+    const tplActions = document.createElement('div');
+    tplActions.className = 'habit-actions';
+    tplActions.appendChild(copyBtn);
+    tplActions.appendChild(editTplBtn);
+    block.appendChild(tplActions);
+  }
 
   // Sharon template textarea (only visible when Edit Template is active)
   if (h.id === 'biz_sharon' && ui.editingTemplate) {
