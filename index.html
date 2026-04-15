@@ -1225,34 +1225,6 @@ body {
     <div id="keystone-container" class="habit-grid-2col"></div>
   </div>
 
-  <!-- Revenue Tracker -->
-  <div class="card">
-    <div class="card-title" data-editable="title_revenue">Revenue Tracker</div>
-    <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">
-      <span style="font-size:1.4rem;color:var(--muted);">$</span>
-      <input type="text" class="rev-input-big" id="rev-total" placeholder="0">
-      <span style="font-size:0.85rem;color:var(--muted);">/mo</span>
-    </div>
-    <div id="rev-milestone-label" style="font-size:0.82rem;color:var(--muted);margin-bottom:4px;"></div>
-    <div class="progress-bar"><div class="progress-fill" id="rev-progress"></div></div>
-    <div class="rev-breakdown">
-      <div class="rev-item">
-        <label>Template sales ($27/sale)</label>
-        <input type="number" id="rev-templates" min="0" value="0">
-        <div class="rev-calc" id="rev-template-calc">$0</div>
-      </div>
-      <div class="rev-item">
-        <label>App MRR ($5/mo)</label>
-        <input type="number" id="rev-subs" min="0" value="0">
-        <div class="rev-calc" id="rev-sub-calc">$0/mo</div>
-      </div>
-    </div>
-    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:8px;">
-      <strong>Calculated total:</strong> <span id="rev-computed">$0/mo</span>
-    </div>
-    <div class="milestones" id="milestones-list"></div>
-  </div>
-
 
 </section>
 
@@ -1295,6 +1267,34 @@ body {
   <div class="card">
     <div class="card-title" data-editable="title_business">Daily Business Non-Negotiables</div>
     <div id="business-container" class="habit-grid-2col"></div>
+  </div>
+
+  <!-- Revenue Tracker -->
+  <div class="card">
+    <div class="card-title" data-editable="title_revenue">Revenue Tracker</div>
+    <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">
+      <span style="font-size:1.4rem;color:var(--muted);">$</span>
+      <input type="text" class="rev-input-big" id="rev-total" placeholder="0">
+      <span style="font-size:0.85rem;color:var(--muted);">/mo</span>
+    </div>
+    <div id="rev-milestone-label" style="font-size:0.82rem;color:var(--muted);margin-bottom:4px;"></div>
+    <div class="progress-bar"><div class="progress-fill" id="rev-progress"></div></div>
+    <div class="rev-breakdown">
+      <div class="rev-item">
+        <label>Template sales ($27/sale)</label>
+        <input type="number" id="rev-templates" min="0" value="0">
+        <div class="rev-calc" id="rev-template-calc">$0</div>
+      </div>
+      <div class="rev-item">
+        <label>App MRR ($5/mo)</label>
+        <input type="number" id="rev-subs" min="0" value="0">
+        <div class="rev-calc" id="rev-sub-calc">$0/mo</div>
+      </div>
+    </div>
+    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:8px;">
+      <strong>Calculated total:</strong> <span id="rev-computed">$0/mo</span>
+    </div>
+    <div class="milestones" id="milestones-list"></div>
   </div>
 
 </section>
