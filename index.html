@@ -1117,6 +1117,90 @@ body {
 }
 .sharon-tpl-text:focus { border-color: var(--terracotta); }
 
+/* ======== FUNNEL ======== */
+.funnel-stages {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 700px;
+  margin: 0 auto;
+}
+.funnel-stage {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  padding: 10px 0;
+}
+.funnel-bar-wrap {
+  flex: 1;
+  position: relative;
+}
+.funnel-bar {
+  height: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+  transition: width 0.4s ease;
+}
+.funnel-bar-label {
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.funnel-count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  position: relative;
+  z-index: 1;
+  padding-left: 10px;
+}
+.funnel-conv {
+  width: 52px;
+  text-align: right;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--muted);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.funnel-input {
+  width: 70px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-align: center;
+  font-family: inherit;
+  font-size: 0.8rem;
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.funnel-input:focus { border-color: var(--terracotta); }
+.funnel-arrow {
+  text-align: center;
+  color: var(--sand);
+  font-size: 0.7rem;
+  padding: 2px 0;
+  max-width: 700px;
+  margin: 0 auto;
+}
+@media (max-width: 480px) {
+  .funnel-bar { height: 30px; font-size: 0.7rem; padding: 0 10px; }
+  .funnel-input { width: 56px; font-size: 0.75rem; }
+  .funnel-conv { width: 44px; font-size: 0.62rem; }
+}
+
 /* ======== LINK TRACKER ======== */
 .link-item {
   background: var(--bg);
@@ -1560,6 +1644,12 @@ body {
     <div class="milestones" id="milestones-list"></div>
   </div>
 
+  <!-- Funnel -->
+  <div class="card">
+    <div class="card-title" data-editable="title_funnel">Funnel</div>
+    <div id="funnel-visual"></div>
+  </div>
+
   <!-- Link Tracker -->
   <div class="card">
     <div class="card-title" data-editable="title_links">Link Tracker</div>
@@ -1987,7 +2077,7 @@ function initTabs() {
       LS.set('active_tab', btn.dataset.tab);
       // Re-render all habits to sync both tabs
       if (btn.dataset.tab === 'tab-habits' || btn.dataset.tab === 'tab-dashboard' || btn.dataset.tab === 'tab-business') renderAllHabits();
-      if (btn.dataset.tab === 'tab-business') renderLinkTracker();
+      if (btn.dataset.tab === 'tab-business') { _cachedLinks = null; _cachedClicks = null; renderFunnel(); renderLinkTracker(); }
     });
   });
 }
@@ -2863,53 +2953,59 @@ const linkStatsOpen = {};
 
 async function fetchLinks() {
   try {
-    const res = await fetch(SB_URL + '/rest/v1/links?select=name,destination,created_at&order=created_at.desc', {
+    const res = await fetch(SB_URL + '/rest/v1/links?select=name,destination,created_at,funnel_stage&order=created_at.desc', {
       headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
     });
     return res.ok ? await res.json() : [];
   } catch { return []; }
 }
 
-async function fetchClickCounts() {
+// Fetch all clicks and compute unique counts (by visitor_id per link)
+async function fetchAllClicks() {
   try {
-    const res = await fetch(SB_URL + '/rest/v1/rpc/link_click_counts', {
-      method: 'POST',
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' },
-      body: '{}'
+    const res = await fetch(SB_URL + '/rest/v1/link_clicks?select=link_name,visitor_id,clicked_at,referrer,utm_source,utm_medium&order=clicked_at.desc&limit=5000', {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
     });
-    if (!res.ok) {
-      // Fallback: fetch all clicks and count manually
-      const r2 = await fetch(SB_URL + '/rest/v1/link_clicks?select=link_name', {
-        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
-      });
-      if (!r2.ok) return {};
-      const clicks = await r2.json();
-      const counts = {};
-      clicks.forEach(c => { counts[c.link_name] = (counts[c.link_name] || 0) + 1; });
-      return counts;
+    return res.ok ? await res.json() : [];
+  } catch { return []; }
+}
+
+function computeUniqueCounts(clicks) {
+  const counts = {};
+  const seen = {};
+  clicks.forEach(c => {
+    const key = c.link_name;
+    if (!counts[key]) { counts[key] = 0; seen[key] = new Set(); }
+    const vid = c.visitor_id || c.clicked_at; // fallback for old clicks without visitor_id
+    if (!seen[key].has(vid)) {
+      seen[key].add(vid);
+      counts[key]++;
     }
-    const rows = await res.json();
-    const counts = {};
-    rows.forEach(r => { counts[r.link_name] = parseInt(r.count); });
-    return counts;
-  } catch { return {}; }
+  });
+  return counts;
 }
 
-async function fetchClicksForLink(name) {
-  try {
-    const res = await fetch(SB_URL + '/rest/v1/link_clicks?link_name=eq.' + encodeURIComponent(name) + '&select=clicked_at,referrer,utm_source,utm_medium&order=clicked_at.desc&limit=500', {
-      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
-    });
-    return res.ok ? await res.json() : [];
-  } catch { return []; }
+function getClicksForLink(allClicks, name) {
+  return allClicks.filter(c => c.link_name === name);
 }
 
-async function createLink(name, destination) {
+function getUniqueClicksForLink(allClicks, name) {
+  const seen = new Set();
+  return allClicks.filter(c => {
+    if (c.link_name !== name) return false;
+    const vid = c.visitor_id || c.clicked_at;
+    if (seen.has(vid)) return false;
+    seen.add(vid);
+    return true;
+  });
+}
+
+async function createLink(name, destination, funnelStage) {
   try {
     await fetch(SB_URL + '/rest/v1/links', {
       method: 'POST',
       headers: { ...SB_HEADERS },
-      body: JSON.stringify({ name, destination })
+      body: JSON.stringify({ name, destination, funnel_stage: funnelStage || 'link-click' })
     });
   } catch {}
 }
@@ -2926,7 +3022,113 @@ async function deleteLink(name) {
       headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
     });
   } catch {}
+  _cachedLinks = null; _cachedClicks = null;
+  renderFunnel();
   renderLinkTracker();
+}
+
+// Funnel stage definitions
+const FUNNEL_STAGES = [
+  { id: 'views', label: 'Views', color: '#A8B5A0', manual: true },
+  { id: 'comments', label: 'Comments', color: '#B8C4AB', manual: true },
+  { id: 'link-sent', label: 'Link Sent', color: '#C4CDB8', manual: true },
+  { id: 'link-click', label: 'Link Clicked', color: '#D4C5A9', manual: false },
+  { id: 'landing', label: 'Landing Page', color: '#DEB99A', manual: false },
+  { id: 'lead', label: 'Lead Captured', color: '#D4A484', manual: false },
+  { id: 'tripwire', label: 'Tripwire Sale', color: '#C9896A', manual: false },
+  { id: 'email-click', label: 'Email Sequence Click', color: '#C47A5A', manual: false },
+  { id: 'hub-sale', label: 'Hub Sale', color: '#A85D3E', manual: false },
+];
+
+// Cache for fetched data so funnel + link tracker share it
+let _cachedLinks = null;
+let _cachedClicks = null;
+
+async function loadLinkData() {
+  [_cachedLinks, _cachedClicks] = await Promise.all([fetchLinks(), fetchAllClicks()]);
+}
+
+async function renderFunnel() {
+  const container = $('funnel-visual');
+  if (!container) return;
+  if (!_cachedLinks) await loadLinkData();
+
+  const links = _cachedLinks;
+  const allClicks = _cachedClicks;
+  const uniqueCounts = computeUniqueCounts(allClicks);
+
+  // Compute auto counts per funnel stage
+  const stageCounts = {};
+  FUNNEL_STAGES.forEach(s => { stageCounts[s.id] = 0; });
+  links.forEach(link => {
+    const stage = link.funnel_stage || 'link-click';
+    stageCounts[stage] = (stageCounts[stage] || 0) + (uniqueCounts[link.name] || 0);
+  });
+
+  // Load manual values
+  const manualData = LS.get('funnel_manual', {});
+
+  container.innerHTML = '';
+  const stagesDiv = document.createElement('div');
+  stagesDiv.className = 'funnel-stages';
+
+  const maxVal = Math.max(1, ...FUNNEL_STAGES.map(s =>
+    s.manual ? (parseInt(manualData[s.id]) || 0) : stageCounts[s.id]
+  ));
+
+  FUNNEL_STAGES.forEach((stage, i) => {
+    const val = stage.manual ? (parseInt(manualData[stage.id]) || 0) : stageCounts[stage.id];
+    const pct = Math.max(20, (val / maxVal) * 100);
+    const prevVal = i > 0
+      ? (FUNNEL_STAGES[i-1].manual ? (parseInt(manualData[FUNNEL_STAGES[i-1].id]) || 0) : stageCounts[FUNNEL_STAGES[i-1].id])
+      : 0;
+    const convRate = (i > 0 && prevVal > 0) ? ((val / prevVal) * 100).toFixed(1) + '%' : '';
+
+    const row = document.createElement('div');
+    row.className = 'funnel-stage';
+
+    if (stage.manual) {
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.className = 'funnel-input';
+      inp.value = manualData[stage.id] || '';
+      inp.placeholder = '0';
+      inp.addEventListener('blur', () => {
+        const d = LS.get('funnel_manual', {});
+        d[stage.id] = parseInt(inp.value) || 0;
+        LS.set('funnel_manual', d);
+        renderFunnel();
+      });
+      row.appendChild(inp);
+    }
+
+    const barWrap = document.createElement('div');
+    barWrap.className = 'funnel-bar-wrap';
+    const bar = document.createElement('div');
+    bar.className = 'funnel-bar';
+    bar.style.width = pct + '%';
+    bar.style.background = stage.color;
+    bar.innerHTML = `<span class="funnel-bar-label">${stage.label}</span><span class="funnel-count">${val}</span>`;
+    barWrap.appendChild(bar);
+    row.appendChild(barWrap);
+
+    const conv = document.createElement('div');
+    conv.className = 'funnel-conv';
+    conv.textContent = convRate;
+    row.appendChild(conv);
+
+    stagesDiv.appendChild(row);
+
+    // Arrow between stages
+    if (i < FUNNEL_STAGES.length - 1) {
+      const arrow = document.createElement('div');
+      arrow.className = 'funnel-arrow';
+      arrow.textContent = '\u25BC';
+      stagesDiv.appendChild(arrow);
+    }
+  });
+
+  container.appendChild(stagesDiv);
 }
 
 async function renderLinkTracker() {
@@ -2934,21 +3136,26 @@ async function renderLinkTracker() {
   if (!container) return;
   container.innerHTML = '<p style="color:var(--muted);font-size:0.82rem;">Loading links...</p>';
 
-  const [links, counts] = await Promise.all([fetchLinks(), fetchClickCounts()]);
+  if (!_cachedLinks) await loadLinkData();
+  const links = _cachedLinks;
+  const allClicks = _cachedClicks;
+  const uniqueCounts = computeUniqueCounts(allClicks);
   container.innerHTML = '';
 
   for (const link of links) {
     const item = document.createElement('div');
     item.className = 'link-item';
-    const clickCount = counts[link.name] || 0;
+    const clickCount = uniqueCounts[link.name] || 0;
     const trackUrl = LINK_BASE + encodeURIComponent(link.name);
+    const stageName = (FUNNEL_STAGES.find(s => s.id === link.funnel_stage) || {}).label || link.funnel_stage || 'Link Click';
 
     // Header
     const hdr = document.createElement('div');
     hdr.className = 'link-item-header';
     hdr.innerHTML = `
       <span class="link-name">${link.name}</span>
-      <span class="link-clicks-badge">${clickCount} click${clickCount !== 1 ? 's' : ''}</span>
+      <span class="link-clicks-badge">${clickCount} unique click${clickCount !== 1 ? 's' : ''}</span>
+      <span class="hs-badge month" style="font-size:0.65rem;padding:2px 8px;">${stageName}</span>
     `;
     item.appendChild(hdr);
 
@@ -2990,32 +3197,25 @@ async function renderLinkTracker() {
 
     // Stats panel
     if (linkStatsOpen[link.name]) {
+      const clicks = getUniqueClicksForLink(allClicks, link.name);
       const statsPanel = document.createElement('div');
       statsPanel.className = 'link-stats open';
-      statsPanel.innerHTML = '<p style="color:var(--muted);font-size:0.78rem;">Loading stats...</p>';
-      item.appendChild(statsPanel);
 
-      // Fetch and render stats async
-      fetchClicksForLink(link.name).then(clicks => {
-        if (!clicks.length) {
-          statsPanel.innerHTML = '<p style="color:var(--muted);font-size:0.78rem;">No clicks yet.</p>';
-          return;
-        }
-        // Summary stats
+      if (!clicks.length) {
+        statsPanel.innerHTML = '<p style="color:var(--muted);font-size:0.78rem;">No clicks yet.</p>';
+      } else {
         const today = todayStr();
         const todayClicks = clicks.filter(c => c.clicked_at.slice(0, 10) === today).length;
         const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
         const weekClicks = clicks.filter(c => new Date(c.clicked_at) >= weekAgo).length;
 
-        // Source breakdown
         const sources = {};
         clicks.forEach(c => {
-          const s = c.utm_source || c.referrer || 'direct';
+          const s = c.utm_source || (c.referrer ? new URL(c.referrer).hostname : null) || 'direct';
           sources[s] = (sources[s] || 0) + 1;
         });
         const topSource = Object.entries(sources).sort((a, b) => b[1] - a[1])[0];
 
-        statsPanel.innerHTML = '';
         const grid = document.createElement('div');
         grid.className = 'link-stats-grid';
         grid.innerHTML = `
@@ -3025,7 +3225,6 @@ async function renderLinkTracker() {
         `;
         statsPanel.appendChild(grid);
 
-        // Top source
         if (topSource) {
           const srcDiv = document.createElement('div');
           srcDiv.style.cssText = 'font-size:0.75rem;color:var(--muted);margin-top:8px;text-align:right;';
@@ -3046,22 +3245,16 @@ async function renderLinkTracker() {
           const dayCount = clicks.filter(c => c.clicked_at.slice(0, 10) === ds).length;
           const col = document.createElement('div');
           col.className = 'link-daily-bar';
-          const val = document.createElement('div');
-          val.className = 'link-daily-val';
-          val.textContent = dayCount;
-          const fill = document.createElement('div');
-          fill.className = 'link-daily-fill';
-          fill.style.height = Math.max(0, (dayCount / maxDaily) * 30) + 'px';
-          const lbl = document.createElement('div');
-          lbl.className = 'link-daily-label';
-          lbl.textContent = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
-          col.appendChild(val);
-          col.appendChild(fill);
-          col.appendChild(lbl);
+          col.innerHTML = `
+            <div class="link-daily-val">${dayCount}</div>
+            <div class="link-daily-fill" style="height:${Math.max(0, (dayCount / maxDaily) * 30)}px"></div>
+            <div class="link-daily-label">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]}</div>
+          `;
           chart.appendChild(col);
         }
         statsPanel.appendChild(chart);
-      });
+      }
+      item.appendChild(statsPanel);
     }
 
     container.appendChild(item);
@@ -3078,11 +3271,17 @@ async function renderLinkTracker() {
   container.appendChild(addBtn);
 
   if (linkAddOpen) {
+    const stageOpts = FUNNEL_STAGES.filter(s => !s.manual).map(s =>
+      `<option value="${s.id}">${s.label}</option>`
+    ).join('');
     const form = document.createElement('div');
     form.className = 'link-add-form open';
     form.innerHTML = `
       <input type="text" id="link-new-name" placeholder="Link name (e.g. ig-bio, dm-template)">
       <input type="text" id="link-new-dest" placeholder="Destination URL (e.g. https://hellomelmo.com/...)">
+      <select id="link-new-stage" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:8px;">
+        ${stageOpts}
+      </select>
       <div class="hab-form-actions">
         <button class="btn-sm" id="link-create-btn">Create</button>
         <button class="btn-sm" id="link-cancel-btn">Cancel</button>
@@ -3092,10 +3291,13 @@ async function renderLinkTracker() {
     form.querySelector('#link-create-btn').addEventListener('click', async () => {
       const name = form.querySelector('#link-new-name').value.trim().replace(/\s+/g, '-').toLowerCase();
       const dest = form.querySelector('#link-new-dest').value.trim();
+      const stage = form.querySelector('#link-new-stage').value;
       if (!name || !dest) return;
-      await createLink(name, dest);
+      await createLink(name, dest, stage);
       linkAddOpen = false;
-      renderLinkTracker();
+      _cachedLinks = null; _cachedClicks = null;
+      await renderFunnel();
+      await renderLinkTracker();
     });
     form.querySelector('#link-cancel-btn').addEventListener('click', () => {
       linkAddOpen = false;
@@ -3258,6 +3460,7 @@ function init() {
   initTabs();
   renderAllHabits();
   renderTodos();
+  renderFunnel();
   renderLinkTracker();
   initRevenue();
   initCal();

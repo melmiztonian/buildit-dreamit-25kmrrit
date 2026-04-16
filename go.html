@@ -8,6 +8,15 @@ const SB_KEY = 'sb_publishable_a_7d3ojYoI3Glt0R9AMbhA_1rH_urFn';
 const params = new URLSearchParams(window.location.search);
 const linkName = params.get('l');
 
+// Simple visitor fingerprint (not perfect, but good enough for unique counting)
+function getVisitorId() {
+  const stored = localStorage.getItem('_vid');
+  if (stored) return stored;
+  const id = 'v_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  localStorage.setItem('_vid', id);
+  return id;
+}
+
 if (!linkName) {
   document.body.innerHTML = '<p style="font-family:sans-serif;color:#c0392b;text-align:center;margin-top:40vh;">Invalid link.</p>';
 } else {
@@ -25,7 +34,8 @@ if (!linkName) {
       user_agent: navigator.userAgent || null,
       utm_source: params.get('utm_source') || null,
       utm_medium: params.get('utm_medium') || null,
-      utm_campaign: params.get('utm_campaign') || null
+      utm_campaign: params.get('utm_campaign') || null,
+      visitor_id: getVisitorId()
     })
   }).catch(() => {});
 
