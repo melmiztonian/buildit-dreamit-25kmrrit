@@ -1117,6 +1117,138 @@ body {
 }
 .sharon-tpl-text:focus { border-color: var(--terracotta); }
 
+/* ======== LINK TRACKER ======== */
+.link-item {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.link-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.link-name {
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+.link-clicks-badge {
+  background: rgba(196, 122, 90, 0.12);
+  color: var(--terracotta);
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.link-url {
+  font-size: 0.72rem;
+  color: var(--muted);
+  word-break: break-all;
+  margin-top: 4px;
+}
+.link-dest {
+  font-size: 0.72rem;
+  color: var(--sage);
+  word-break: break-all;
+}
+.link-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+.link-stats {
+  margin-top: 10px;
+  display: none;
+}
+.link-stats.open { display: block; }
+.link-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+.link-stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+.link-stat-num {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--terracotta);
+  font-variant-numeric: tabular-nums;
+}
+.link-stat-label {
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-weight: 600;
+}
+.link-daily-chart {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 50px;
+  margin-top: 10px;
+  background: var(--card);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  padding: 8px 10px 4px;
+}
+.link-daily-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.link-daily-fill {
+  width: 100%;
+  background: var(--terracotta);
+  border-radius: 3px 3px 0 0;
+  min-height: 0;
+  transition: height 0.3s;
+}
+.link-daily-label {
+  font-size: 0.55rem;
+  color: var(--muted);
+}
+.link-daily-val {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--terracotta);
+  font-variant-numeric: tabular-nums;
+}
+.link-add-form {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 10px;
+  display: none;
+}
+.link-add-form.open { display: block; }
+.link-add-form input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  margin-bottom: 8px;
+}
+.link-add-form input:focus { border-color: var(--terracotta); }
+
 /* ======== COUNTDOWN BAR ======== */
 .countdown-bar {
   display: flex;
@@ -1426,6 +1558,13 @@ body {
       <strong>Calculated total:</strong> <span id="rev-computed">$0/mo</span>
     </div>
     <div class="milestones" id="milestones-list"></div>
+  </div>
+
+  <!-- Link Tracker -->
+  <div class="card">
+    <div class="card-title" data-editable="title_links">Link Tracker</div>
+    <div class="card-subtitle">Create trackable links. Share them anywhere. See every click.</div>
+    <div id="link-tracker"></div>
   </div>
 
 </section>
@@ -1848,6 +1987,7 @@ function initTabs() {
       LS.set('active_tab', btn.dataset.tab);
       // Re-render all habits to sync both tabs
       if (btn.dataset.tab === 'tab-habits' || btn.dataset.tab === 'tab-dashboard' || btn.dataset.tab === 'tab-business') renderAllHabits();
+      if (btn.dataset.tab === 'tab-business') renderLinkTracker();
     });
   });
 }
@@ -2715,6 +2855,256 @@ function toggleCal(id) {
 }
 
 /* ================================================================
+   LINK TRACKER
+   ================================================================ */
+const LINK_BASE = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'go.html?l=';
+let linkAddOpen = false;
+const linkStatsOpen = {};
+
+async function fetchLinks() {
+  try {
+    const res = await fetch(SB_URL + '/rest/v1/links?select=name,destination,created_at&order=created_at.desc', {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    return res.ok ? await res.json() : [];
+  } catch { return []; }
+}
+
+async function fetchClickCounts() {
+  try {
+    const res = await fetch(SB_URL + '/rest/v1/rpc/link_click_counts', {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' },
+      body: '{}'
+    });
+    if (!res.ok) {
+      // Fallback: fetch all clicks and count manually
+      const r2 = await fetch(SB_URL + '/rest/v1/link_clicks?select=link_name', {
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+      });
+      if (!r2.ok) return {};
+      const clicks = await r2.json();
+      const counts = {};
+      clicks.forEach(c => { counts[c.link_name] = (counts[c.link_name] || 0) + 1; });
+      return counts;
+    }
+    const rows = await res.json();
+    const counts = {};
+    rows.forEach(r => { counts[r.link_name] = parseInt(r.count); });
+    return counts;
+  } catch { return {}; }
+}
+
+async function fetchClicksForLink(name) {
+  try {
+    const res = await fetch(SB_URL + '/rest/v1/link_clicks?link_name=eq.' + encodeURIComponent(name) + '&select=clicked_at,referrer,utm_source,utm_medium&order=clicked_at.desc&limit=500', {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    return res.ok ? await res.json() : [];
+  } catch { return []; }
+}
+
+async function createLink(name, destination) {
+  try {
+    await fetch(SB_URL + '/rest/v1/links', {
+      method: 'POST',
+      headers: { ...SB_HEADERS },
+      body: JSON.stringify({ name, destination })
+    });
+  } catch {}
+}
+
+async function deleteLink(name) {
+  if (!confirm('Delete link "' + name + '" and all its click data?')) return;
+  try {
+    await fetch(SB_URL + '/rest/v1/links?name=eq.' + encodeURIComponent(name), {
+      method: 'DELETE',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+    await fetch(SB_URL + '/rest/v1/link_clicks?link_name=eq.' + encodeURIComponent(name), {
+      method: 'DELETE',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    });
+  } catch {}
+  renderLinkTracker();
+}
+
+async function renderLinkTracker() {
+  const container = $('link-tracker');
+  if (!container) return;
+  container.innerHTML = '<p style="color:var(--muted);font-size:0.82rem;">Loading links...</p>';
+
+  const [links, counts] = await Promise.all([fetchLinks(), fetchClickCounts()]);
+  container.innerHTML = '';
+
+  for (const link of links) {
+    const item = document.createElement('div');
+    item.className = 'link-item';
+    const clickCount = counts[link.name] || 0;
+    const trackUrl = LINK_BASE + encodeURIComponent(link.name);
+
+    // Header
+    const hdr = document.createElement('div');
+    hdr.className = 'link-item-header';
+    hdr.innerHTML = `
+      <span class="link-name">${link.name}</span>
+      <span class="link-clicks-badge">${clickCount} click${clickCount !== 1 ? 's' : ''}</span>
+    `;
+    item.appendChild(hdr);
+
+    // URLs
+    const urlDiv = document.createElement('div');
+    urlDiv.innerHTML = `
+      <div class="link-url">${trackUrl}</div>
+      <div class="link-dest">&rarr; ${link.destination}</div>
+    `;
+    item.appendChild(urlDiv);
+
+    // Actions
+    const actions = document.createElement('div');
+    actions.className = 'link-actions';
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'habit-action-pill';
+    copyBtn.textContent = 'Copy Link';
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(trackUrl).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy Link'; }, 1500);
+      });
+    });
+    const statsBtn = document.createElement('button');
+    statsBtn.className = 'habit-action-pill' + (linkStatsOpen[link.name] ? ' active' : '');
+    statsBtn.textContent = linkStatsOpen[link.name] ? 'Hide Stats' : 'Stats';
+    statsBtn.addEventListener('click', () => {
+      linkStatsOpen[link.name] = !linkStatsOpen[link.name];
+      renderLinkTracker();
+    });
+    const delBtn = document.createElement('button');
+    delBtn.className = 'habit-action-pill danger';
+    delBtn.textContent = 'Delete';
+    delBtn.addEventListener('click', () => deleteLink(link.name));
+    actions.appendChild(copyBtn);
+    actions.appendChild(statsBtn);
+    actions.appendChild(delBtn);
+    item.appendChild(actions);
+
+    // Stats panel
+    if (linkStatsOpen[link.name]) {
+      const statsPanel = document.createElement('div');
+      statsPanel.className = 'link-stats open';
+      statsPanel.innerHTML = '<p style="color:var(--muted);font-size:0.78rem;">Loading stats...</p>';
+      item.appendChild(statsPanel);
+
+      // Fetch and render stats async
+      fetchClicksForLink(link.name).then(clicks => {
+        if (!clicks.length) {
+          statsPanel.innerHTML = '<p style="color:var(--muted);font-size:0.78rem;">No clicks yet.</p>';
+          return;
+        }
+        // Summary stats
+        const today = todayStr();
+        const todayClicks = clicks.filter(c => c.clicked_at.slice(0, 10) === today).length;
+        const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+        const weekClicks = clicks.filter(c => new Date(c.clicked_at) >= weekAgo).length;
+
+        // Source breakdown
+        const sources = {};
+        clicks.forEach(c => {
+          const s = c.utm_source || c.referrer || 'direct';
+          sources[s] = (sources[s] || 0) + 1;
+        });
+        const topSource = Object.entries(sources).sort((a, b) => b[1] - a[1])[0];
+
+        statsPanel.innerHTML = '';
+        const grid = document.createElement('div');
+        grid.className = 'link-stats-grid';
+        grid.innerHTML = `
+          <div class="link-stat-card"><div class="link-stat-num">${todayClicks}</div><div class="link-stat-label">Today</div></div>
+          <div class="link-stat-card"><div class="link-stat-num">${weekClicks}</div><div class="link-stat-label">This week</div></div>
+          <div class="link-stat-card"><div class="link-stat-num">${clickCount}</div><div class="link-stat-label">All time</div></div>
+        `;
+        statsPanel.appendChild(grid);
+
+        // Top source
+        if (topSource) {
+          const srcDiv = document.createElement('div');
+          srcDiv.style.cssText = 'font-size:0.75rem;color:var(--muted);margin-top:8px;text-align:right;';
+          srcDiv.innerHTML = 'Top source: <strong style="color:var(--terracotta);">' + topSource[0] + '</strong> (' + topSource[1] + ')';
+          statsPanel.appendChild(srcDiv);
+        }
+
+        // Daily chart (last 7 days)
+        const chart = document.createElement('div');
+        chart.className = 'link-daily-chart';
+        const maxDaily = Math.max(1, ...Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(); d.setDate(d.getDate() - (6 - i));
+          return clicks.filter(c => c.clicked_at.slice(0, 10) === localDateStr(d)).length;
+        }));
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(); d.setDate(d.getDate() - (6 - i));
+          const ds = localDateStr(d);
+          const dayCount = clicks.filter(c => c.clicked_at.slice(0, 10) === ds).length;
+          const col = document.createElement('div');
+          col.className = 'link-daily-bar';
+          const val = document.createElement('div');
+          val.className = 'link-daily-val';
+          val.textContent = dayCount;
+          const fill = document.createElement('div');
+          fill.className = 'link-daily-fill';
+          fill.style.height = Math.max(0, (dayCount / maxDaily) * 30) + 'px';
+          const lbl = document.createElement('div');
+          lbl.className = 'link-daily-label';
+          lbl.textContent = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+          col.appendChild(val);
+          col.appendChild(fill);
+          col.appendChild(lbl);
+          chart.appendChild(col);
+        }
+        statsPanel.appendChild(chart);
+      });
+    }
+
+    container.appendChild(item);
+  }
+
+  // Add link button + form
+  const addBtn = document.createElement('button');
+  addBtn.className = 'todo-add-btn';
+  addBtn.textContent = '+ Create trackable link';
+  addBtn.addEventListener('click', () => {
+    linkAddOpen = !linkAddOpen;
+    renderLinkTracker();
+  });
+  container.appendChild(addBtn);
+
+  if (linkAddOpen) {
+    const form = document.createElement('div');
+    form.className = 'link-add-form open';
+    form.innerHTML = `
+      <input type="text" id="link-new-name" placeholder="Link name (e.g. ig-bio, dm-template)">
+      <input type="text" id="link-new-dest" placeholder="Destination URL (e.g. https://hellomelmo.com/...)">
+      <div class="hab-form-actions">
+        <button class="btn-sm" id="link-create-btn">Create</button>
+        <button class="btn-sm" id="link-cancel-btn">Cancel</button>
+      </div>
+    `;
+    container.appendChild(form);
+    form.querySelector('#link-create-btn').addEventListener('click', async () => {
+      const name = form.querySelector('#link-new-name').value.trim().replace(/\s+/g, '-').toLowerCase();
+      const dest = form.querySelector('#link-new-dest').value.trim();
+      if (!name || !dest) return;
+      await createLink(name, dest);
+      linkAddOpen = false;
+      renderLinkTracker();
+    });
+    form.querySelector('#link-cancel-btn').addEventListener('click', () => {
+      linkAddOpen = false;
+      renderLinkTracker();
+    });
+  }
+}
+
+/* ================================================================
    GROUNDING LIBRARY (TAB 4)
    ================================================================ */
 function getLibrary() { return LS.get('grounding_library', { active: null, backlog: [], archive: [] }); }
@@ -2868,6 +3258,7 @@ function init() {
   initTabs();
   renderAllHabits();
   renderTodos();
+  renderLinkTracker();
   initRevenue();
   initCal();
   renderLibrary();

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Redirecting...</title></head>
+<body>
+<p style="font-family:sans-serif;color:#8B7B6B;text-align:center;margin-top:40vh;">Redirecting...</p>
+<script>
+const SB_URL = 'https://ingvjqyqoqggskkrklhk.supabase.co';
+const SB_KEY = 'sb_publishable_a_7d3ojYoI3Glt0R9AMbhA_1rH_urFn';
+const params = new URLSearchParams(window.location.search);
+const linkName = params.get('l');
+
+if (!linkName) {
+  document.body.innerHTML = '<p style="font-family:sans-serif;color:#c0392b;text-align:center;margin-top:40vh;">Invalid link.</p>';
+} else {
+  // Log the click (non-blocking)
+  fetch(SB_URL + '/rest/v1/link_clicks', {
+    method: 'POST',
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      link_name: linkName,
+      referrer: document.referrer || null,
+      user_agent: navigator.userAgent || null,
+      utm_source: params.get('utm_source') || null,
+      utm_medium: params.get('utm_medium') || null,
+      utm_campaign: params.get('utm_campaign') || null
+    })
+  }).catch(() => {});
+
+  // Fetch destination and redirect
+  fetch(SB_URL + '/rest/v1/links?name=eq.' + encodeURIComponent(linkName) + '&select=destination', {
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+  })
+  .then(r => r.json())
+  .then(rows => {
+    if (rows.length && rows[0].destination) {
+      window.location.href = rows[0].destination;
+    } else {
+      document.body.innerHTML = '<p style="font-family:sans-serif;color:#c0392b;text-align:center;margin-top:40vh;">Link not found.</p>';
+    }
+  })
+  .catch(() => {
+    document.body.innerHTML = '<p style="font-family:sans-serif;color:#c0392b;text-align:center;margin-top:40vh;">Something went wrong.</p>';
+  });
+}
+</script>
+</body></html>
