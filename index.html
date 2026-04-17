@@ -2420,28 +2420,26 @@ function renderHabitBlock(h, container, renderAllFn) {
   `;
   block.appendChild(stats);
 
-  // Pace info (with catch-up line)
+  // Pace info
   const pace = document.createElement('div');
   pace.className = 'habit-pace';
   if (remaining > 0) {
-    // Expected by now: yearGoal minus what you can still do in remaining weeks
     const expectedByNow = Math.max(0, h.yearGoal - (weeksLeft * h.weekTarget));
     const behind = expectedByNow - yearTotal;
-    const stillNeededThisWeek = Math.max(0, pacePerWeek - weekTotal);
-    const endOfWeekTarget = Math.max(0, h.yearGoal - ((weeksLeft - 1) * h.weekTarget));
-    const moreThisWeek = Math.max(0, endOfWeekTarget - yearTotal);
+    const thisWeekOwed = Math.max(0, h.weekTarget - weekTotal);
+    const prevDebt = Math.max(0, behind);
+    const totalDebt = thisWeekOwed + prevDebt;
+
     let lines = `<strong>${remaining}</strong> remaining to hit yearly goal`;
-    lines += `<br>End-of-week target: <strong>${endOfWeekTarget}</strong> total (need <strong>${moreThisWeek}</strong> more this week)`;
-    if (behind > 0) {
-      lines += `<br><span style="color:var(--terracotta);">Behind by <strong>${behind}</strong></span>`;
+    if (totalDebt > 0) {
+      lines += `<br><span style="color:var(--terracotta);">Current debt: <strong>${totalDebt}</strong></span> &mdash; ${thisWeekOwed} this week` + (prevDebt > 0 ? ` + ${prevDebt} from previous weeks` : '');
     } else {
-      lines += `<br><span style="color:var(--sage);">On track! <strong>${Math.abs(behind)}</strong> ahead of pace</span>`;
+      lines += `<br><span style="color:var(--sage);">All caught up! <strong>${Math.abs(behind)}</strong> ahead of pace</span>`;
     }
-    // Action plan: catch up over 5 or 10 weeks (or show steady pace)
-    lines += `<br><span style="font-weight:600;color:var(--text);margin-top:4px;display:inline-block;">Action plan:</span>`;
+    // Action plan
     if (behind > 0) {
+      lines += `<br><span style="font-weight:600;color:var(--text);margin-top:4px;display:inline-block;">Action plan:</span>`;
       if (behind < 5) {
-        // Can catch up at +1/week in under 5 weeks
         lines += `<br>Do <strong>${h.weekTarget + 1}</strong>/week for <strong>${behind}</strong> week${behind > 1 ? 's' : ''}, then <strong>${h.weekTarget}</strong>/week after`;
       } else {
         [5, 10].forEach(w => {
@@ -2450,8 +2448,6 @@ function renderHabitBlock(h, container, renderAllFn) {
           lines += `<br>Do <strong>${boostPerWeek}</strong>/week for <strong>${sprintWeeks}</strong> weeks, then <strong>${h.weekTarget}</strong>/week after`;
         });
       }
-    } else {
-      lines += `<br>Steady at <strong>${h.weekTarget}</strong>/week &mdash; you're on pace`;
     }
     pace.innerHTML = lines;
   } else {
