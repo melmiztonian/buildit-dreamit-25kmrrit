@@ -2432,9 +2432,9 @@ function renderHabitBlock(h, container, renderAllFn) {
 
     let lines = `<strong>${remaining}</strong> remaining to hit yearly goal`;
     if (totalDebt > 0) {
-      lines += `<br><span style="color:var(--terracotta);">Current debt: <strong>${totalDebt}</strong></span> &mdash; ${thisWeekOwed} more this week` + (prevDebt > 0 ? ` + ${prevDebt} from previous weeks` : '');
+      lines += `<br><span style="color:var(--terracotta);">Current debt: <strong>${totalDebt}</strong></span> &mdash; <strong>${thisWeekOwed}</strong> more this week` + (prevDebt > 0 ? ` + <strong>${prevDebt}</strong> from previous weeks` : '');
     } else {
-      lines += `<br><span style="color:var(--terracotta);">Current debt: <strong>0</strong></span> &mdash; ${thisWeekOwed} more this week`;
+      lines += `<br><span style="color:var(--terracotta);">Current debt: <strong>0</strong></span> &mdash; <strong>${thisWeekOwed}</strong> more this week`;
     }
     if (behind <= 0) {
       lines += `<br><span style="color:var(--sage);">${Math.abs(behind)} ahead of pace</span>`;
