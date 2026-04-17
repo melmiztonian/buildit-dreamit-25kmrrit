@@ -2434,7 +2434,10 @@ function renderHabitBlock(h, container, renderAllFn) {
     if (totalDebt > 0) {
       lines += `<br><span style="color:var(--terracotta);">Current debt: <strong>${totalDebt}</strong></span> &mdash; ${thisWeekOwed} this week` + (prevDebt > 0 ? ` + ${prevDebt} from previous weeks` : '');
     } else {
-      lines += `<br><span style="color:var(--sage);">All caught up! <strong>${Math.abs(behind)}</strong> ahead of pace</span>`;
+      lines += `<br><span style="color:var(--terracotta);">Current debt: <strong>0</strong></span> &mdash; ${thisWeekOwed} this week`;
+    }
+    if (behind <= 0) {
+      lines += `<br><span style="color:var(--sage);">${Math.abs(behind)} ahead of pace</span>`;
     }
     // Action plan
     if (behind > 0) {
