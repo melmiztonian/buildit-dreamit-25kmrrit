@@ -1042,43 +1042,42 @@ body {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
 }
 .challenge-name {
   font-weight: 600;
   font-size: 1rem;
 }
-.challenge-countdown {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--terracotta);
-  background: rgba(196, 122, 90, 0.1);
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-variant-numeric: tabular-nums;
+.challenge-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
 }
+.challenge-pill {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.challenge-pill.countdown { background: rgba(196,122,90,0.1); color: var(--terracotta); }
+.challenge-pill.freq { background: rgba(168,181,160,0.15); color: var(--sage); text-transform: uppercase; letter-spacing: 0.3px; }
+.challenge-pill.score { background: rgba(212,197,169,0.35); color: #6b5a3e; }
+.challenge-pill.done { background: rgba(168,181,160,0.25); color: #4a6340; }
 .challenge-subtitle {
   font-size: 0.82rem;
   color: var(--muted);
   font-style: italic;
   margin-bottom: 8px;
 }
-.challenge-freq {
-  display: inline-block;
-  margin-bottom: 10px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--sage);
-  background: rgba(168, 181, 160, 0.15);
-  padding: 2px 10px;
-  border-radius: 12px;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-}
 .challenge-dates {
   font-size: 0.72rem;
   color: var(--muted);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 .challenge-progress {
   display: flex;
@@ -1088,23 +1087,94 @@ body {
 }
 .challenge-progress-bar {
   flex: 1;
-  height: 8px;
+  height: 10px;
   background: var(--sand-light);
-  border-radius: 4px;
+  border-radius: 5px;
   overflow: hidden;
 }
 .challenge-progress-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--sage), var(--terracotta));
-  border-radius: 4px;
+  border-radius: 5px;
   transition: width 0.3s;
 }
 .challenge-progress-label {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--terracotta);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+.challenge-weight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  justify-content: flex-end;
+}
+.challenge-weight label {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.challenge-weight input {
+  width: 70px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.challenge-weight input:focus { border-color: var(--terracotta); }
+.weight-chart {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.weight-chart-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 8px;
+  text-align: center;
+}
+.weight-chart-area {
+  position: relative;
+  height: 100px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+.weight-chart-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.weight-chart-fill {
+  width: 100%;
+  max-width: 20px;
+  background: var(--terracotta);
+  border-radius: 3px 3px 0 0;
+  transition: height 0.3s;
+}
+.weight-chart-val {
+  font-size: 0.5rem;
+  color: var(--terracotta);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.weight-chart-date {
+  font-size: 0.45rem;
+  color: var(--muted);
 }
 .challenge-add-form input,
 .challenge-add-form select {
@@ -2973,6 +3043,7 @@ function challengeDaysCompleted(ch) {
 }
 
 let challengeAddOpen = {};
+const challengeUIState = {};
 
 function renderChallenges() {
   ['challenges-container-dashboard', 'challenges-container-habits'].forEach(cid => {
@@ -2983,9 +3054,10 @@ function renderChallenges() {
     const today = todayStr();
     const todayDate = new Date(today + 'T12:00:00');
     const weekStartStr = getWeekStart(today);
-    const todayDayIdx = todayDate.getDay();
 
     challenges.forEach((ch, ci) => {
+      if (!challengeUIState[ch.id]) challengeUIState[ch.id] = {};
+      const ui = challengeUIState[ch.id];
       const card = document.createElement('div');
       card.className = 'challenge-card';
 
@@ -2995,17 +3067,24 @@ function renderChallenges() {
       const endDateStr = localDateStr(endDate);
       const daysLeft = Math.max(0, Math.floor((endDate - todayDate) / 86400000) + 1);
       const totalDays = ch.days;
-      const daysElapsed = totalDays - daysLeft;
       const completed = challengeDaysCompleted(ch);
-      const pct = Math.min(100, (daysElapsed / totalDays) * 100);
+      const successPct = totalDays > 0 ? Math.round((completed / totalDays) * 100) : 0;
       const isActive = todayDate >= startDate && todayDate <= endDate;
+      const isDone = todayDate > endDate;
 
-      // Header
+      // Header with pills
       const hdr = document.createElement('div');
       hdr.className = 'challenge-header';
+      const statusEmoji = isDone ? '\uD83C\uDFC6' : (isActive ? '\uD83D\uDD25' : '\u23F3');
+      const statusText = isDone ? 'Complete!' : (isActive ? daysLeft + ' days left' : 'Starts ' + ch.startDate);
       hdr.innerHTML = `
-        <span class="challenge-name">${ch.name}</span>
-        <span class="challenge-countdown">${isActive ? daysLeft + ' days left' : (todayDate > endDate ? 'Completed!' : 'Starts ' + ch.startDate)}</span>
+        <span class="challenge-name">${statusEmoji} ${ch.name}</span>
+        <div class="challenge-pills">
+          <span class="challenge-pill countdown">${statusText}</span>
+          <span class="challenge-pill freq">${ch.freq} ${ch.unit || 'x/week'}</span>
+          <span class="challenge-pill score">${completed}/${totalDays} days</span>
+          <span class="challenge-pill done">${successPct}%</span>
+        </div>
       `;
       card.appendChild(hdr);
 
@@ -3017,28 +3096,23 @@ function renderChallenges() {
         card.appendChild(sub);
       }
 
-      // Freq + dates
-      const freq = document.createElement('span');
-      freq.className = 'challenge-freq';
-      freq.textContent = ch.freq + ' ' + (ch.unit || 'x/week');
-      card.appendChild(freq);
-
+      // Dates
       const dates = document.createElement('div');
       dates.className = 'challenge-dates';
-      dates.textContent = ch.startDate + ' \u2192 ' + endDateStr + ' \u00B7 ' + completed + '/' + totalDays + ' days done';
+      dates.textContent = '\uD83D\uDCC5 ' + ch.startDate + ' \u2192 ' + endDateStr;
       card.appendChild(dates);
 
-      // Progress bar
+      // Progress bar (based on completed/total)
       const prog = document.createElement('div');
       prog.className = 'challenge-progress';
       prog.innerHTML = `
-        <div class="challenge-progress-bar"><div class="challenge-progress-fill" style="width:${pct}%"></div></div>
-        <span class="challenge-progress-label">${Math.round(pct)}%</span>
+        <div class="challenge-progress-bar"><div class="challenge-progress-fill" style="width:${successPct}%"></div></div>
+        <span class="challenge-progress-label">${completed}/${totalDays}</span>
       `;
       card.appendChild(prog);
 
-      // Today's week grid (same style as habits)
-      if (isActive) {
+      // Week grid
+      if (isActive || isDone) {
         const weekData = getChallengeWeekData(ch.id, weekStartStr);
         const weekGrid = document.createElement('div');
         weekGrid.className = 'habit-week-grid';
@@ -3051,7 +3125,6 @@ function renderChallenges() {
           const dayDate = new Date(weekStart);
           dayDate.setDate(dayDate.getDate() + di);
           const dateNum = dayDate.getDate();
-          const ds = localDateStr(dayDate);
           const inRange = dayDate >= startDate && dayDate <= endDate;
 
           const lbl = document.createElement('div');
@@ -3078,15 +3151,97 @@ function renderChallenges() {
             empty.style.cssText = 'width:34px;height:34px;margin:0 auto;';
             col.appendChild(empty);
           }
-
           weekGrid.appendChild(col);
         });
         card.appendChild(weekGrid);
       }
 
-      // Actions
+      // Weight tracking (today)
+      if (isActive) {
+        const weightData = LS.get('weight_' + ch.id, {});
+        const wWrap = document.createElement('div');
+        wWrap.className = 'challenge-weight';
+        wWrap.innerHTML = '<label>\u2696\uFE0F Today\'s weight:</label>';
+        const wInp = document.createElement('input');
+        wInp.type = 'number';
+        wInp.step = '0.1';
+        wInp.placeholder = 'lbs';
+        wInp.value = weightData[today] || '';
+        wInp.addEventListener('blur', () => {
+          const wd = LS.get('weight_' + ch.id, {});
+          if (wInp.value.trim()) { wd[today] = parseFloat(wInp.value); } else { delete wd[today]; }
+          LS.set('weight_' + ch.id, wd);
+          renderChallenges();
+        });
+        wWrap.appendChild(wInp);
+        wWrap.innerHTML += '<span style="font-size:0.75rem;color:var(--muted);">lbs</span>';
+        // Re-attach the input event after innerHTML modification
+        card.appendChild(wWrap);
+        // Fix: innerHTML destroyed the input, re-render properly
+        card.removeChild(wWrap);
+        const wWrap2 = document.createElement('div');
+        wWrap2.className = 'challenge-weight';
+        const wLabel = document.createElement('label');
+        wLabel.textContent = '\u2696\uFE0F Today\'s weight:';
+        const wInp2 = document.createElement('input');
+        wInp2.type = 'number';
+        wInp2.step = '0.1';
+        wInp2.placeholder = 'lbs';
+        wInp2.value = weightData[today] || '';
+        wInp2.addEventListener('blur', () => {
+          const wd = LS.get('weight_' + ch.id, {});
+          if (wInp2.value.trim()) { wd[today] = parseFloat(wInp2.value); } else { delete wd[today]; }
+          LS.set('weight_' + ch.id, wd);
+          renderChallenges();
+        });
+        const wUnit = document.createElement('span');
+        wUnit.style.cssText = 'font-size:0.75rem;color:var(--muted);';
+        wUnit.textContent = 'lbs';
+        wWrap2.appendChild(wLabel);
+        wWrap2.appendChild(wInp2);
+        wWrap2.appendChild(wUnit);
+        card.appendChild(wWrap2);
+
+        // Weight chart
+        const allWeights = LS.get('weight_' + ch.id, {});
+        const wDates = Object.keys(allWeights).sort();
+        if (wDates.length > 1) {
+          const chart = document.createElement('div');
+          chart.className = 'weight-chart';
+          chart.innerHTML = '<div class="weight-chart-title">\uD83D\uDCC9 Weight Over Time</div>';
+          const area = document.createElement('div');
+          area.className = 'weight-chart-area';
+          const vals = wDates.map(d => allWeights[d]);
+          const minW = Math.min(...vals) - 1;
+          const maxW = Math.max(...vals) + 1;
+          const range = maxW - minW || 1;
+          wDates.forEach(d => {
+            const v = allWeights[d];
+            const h = Math.max(4, ((v - minW) / range) * 80);
+            const bar = document.createElement('div');
+            bar.className = 'weight-chart-bar';
+            bar.innerHTML = `
+              <div class="weight-chart-val">${v}</div>
+              <div class="weight-chart-fill" style="height:${h}px"></div>
+              <div class="weight-chart-date">${d.slice(5)}</div>
+            `;
+            area.appendChild(bar);
+          });
+          chart.appendChild(area);
+          card.appendChild(chart);
+        }
+      }
+
+      // Actions: Edit, Delete
       const actions = document.createElement('div');
       actions.className = 'habit-actions';
+      const editBtn = document.createElement('button');
+      editBtn.className = 'habit-action-pill' + (ui.editing ? ' active' : '');
+      editBtn.textContent = ui.editing ? 'Cancel' : 'Edit';
+      editBtn.addEventListener('click', () => {
+        ui.editing = !ui.editing;
+        renderChallenges();
+      });
       const delBtn = document.createElement('button');
       delBtn.className = 'habit-action-pill danger';
       delBtn.textContent = 'Delete';
@@ -3097,8 +3252,47 @@ function renderChallenges() {
         setChallenges(c);
         renderChallenges();
       });
+      actions.appendChild(editBtn);
       actions.appendChild(delBtn);
       card.appendChild(actions);
+
+      // Edit form
+      if (ui.editing) {
+        const ef = document.createElement('div');
+        ef.className = 'challenge-add-form';
+        ef.style.cssText = 'background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:10px;';
+        ef.innerHTML = `
+          <input type="text" data-f="name" value="${ch.name.replace(/"/g, '&quot;')}">
+          <input type="text" data-f="subtitle" value="${(ch.subtitle || '').replace(/"/g, '&quot;')}" placeholder="Description">
+          <div class="hab-form-row">
+            <div><label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:3px;">Frequency</label><input type="number" data-f="freq" value="${ch.freq}" min="1"></div>
+            <div><label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:3px;">Duration (days)</label><input type="number" data-f="days" value="${ch.days}" min="1"></div>
+          </div>
+          <div class="hab-form-row">
+            <div><label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:3px;">Start date</label><input type="date" data-f="start" value="${ch.startDate}"></div>
+            <div><label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:3px;">Unit</label><input type="text" data-f="unit" value="${ch.unit || 'x/week'}"></div>
+          </div>
+          <div class="hab-form-actions">
+            <button class="btn-sm" data-action="save">Save</button>
+          </div>
+        `;
+        ef.querySelector('[data-action="save"]').addEventListener('click', () => {
+          const c = getChallenges();
+          c[ci] = {
+            ...ch,
+            name: ef.querySelector('[data-f="name"]').value.trim() || ch.name,
+            subtitle: ef.querySelector('[data-f="subtitle"]').value.trim(),
+            freq: parseInt(ef.querySelector('[data-f="freq"]').value) || ch.freq,
+            days: parseInt(ef.querySelector('[data-f="days"]').value) || ch.days,
+            startDate: ef.querySelector('[data-f="start"]').value || ch.startDate,
+            unit: ef.querySelector('[data-f="unit"]').value.trim() || 'x/week'
+          };
+          setChallenges(c);
+          ui.editing = false;
+          renderChallenges();
+        });
+        card.appendChild(ef);
+      }
 
       container.appendChild(card);
     });
@@ -3106,7 +3300,7 @@ function renderChallenges() {
     // Add challenge button
     const addBtn = document.createElement('button');
     addBtn.className = 'todo-add-btn';
-    addBtn.textContent = '+ Add challenge';
+    addBtn.textContent = '\u2728 Add challenge';
     addBtn.addEventListener('click', () => {
       challengeAddOpen[cid] = !challengeAddOpen[cid];
       renderChallenges();
@@ -3118,8 +3312,8 @@ function renderChallenges() {
       form.className = 'challenge-add-form';
       form.style.cssText = 'background:var(--bg);border-radius:10px;padding:14px;margin-top:10px;';
       form.innerHTML = `
-        <input type="text" data-f="name" placeholder="Challenge name">
-        <input type="text" data-f="subtitle" placeholder="Description (optional)">
+        <input type="text" data-f="name" placeholder="\uD83C\uDFAF Challenge name">
+        <input type="text" data-f="subtitle" placeholder="\uD83D\uDCDD Description (optional)">
         <div class="hab-form-row">
           <div><label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:3px;">Frequency</label><input type="number" data-f="freq" value="5" min="1"></div>
           <div><label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:3px;">Duration (days)</label><input type="number" data-f="days" value="30" min="1"></div>
