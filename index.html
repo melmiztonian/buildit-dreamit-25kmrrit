@@ -1541,6 +1541,33 @@ body {
 }
 .countdown-goal input:focus { border-color: var(--terracotta); }
 
+/* ======== MINI NAV ======== */
+.mini-nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+  padding: 8px 0;
+}
+.mini-nav-pill {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.mini-nav-pill:hover { border-color: var(--terracotta); color: var(--terracotta); }
+
 /* ======== REORDER PANEL ======== */
 .reorder-panel {
   margin-top: 16px;
@@ -1740,6 +1767,7 @@ body {
 
 <!-- ==================== TAB 1: DASHBOARD ==================== -->
 <section id="tab-dashboard" class="tab-page active">
+  <div class="mini-nav" data-mini-tab="tab-dashboard"></div>
 
   <div class="two-up-row readme-row" data-card-id="readme-morning" data-card-label="READ ME + Morning Ritual">
     <div class="card readme-card">
@@ -1801,6 +1829,7 @@ body {
 
 <!-- ==================== TAB 2: HABIT TRACKER ==================== -->
 <section id="tab-habits" class="tab-page">
+  <div class="mini-nav" data-mini-tab="tab-habits"></div>
 
   <!-- Countdown Bar -->
   <div class="card countdown-bar" data-card-id="countdown" data-card-label="Countdown">
@@ -1836,6 +1865,7 @@ body {
 
 <!-- ==================== TAB 3: CHALLENGES ==================== -->
 <section id="tab-challenges" class="tab-page">
+  <div class="mini-nav" data-mini-tab="tab-challenges"></div>
 
   <div class="card" data-card-id="challenges-main" data-card-label="Challenges">
     <div class="card-title" data-editable="title_challenges">Challenges</div>
@@ -1848,6 +1878,7 @@ body {
 
 <!-- ==================== TAB 4: BUILDING THE DREAM ==================== -->
 <section id="tab-business" class="tab-page">
+  <div class="mini-nav" data-mini-tab="tab-business"></div>
 
   <div class="card" data-card-id="business" data-card-label="Business Non-Negotiables">
     <div class="card-title" data-editable="title_business">Daily Business Non-Negotiables</div>
@@ -1907,6 +1938,7 @@ body {
 
 <!-- ==================== TAB 4: CAL'S FRAMEWORK ==================== -->
 <section id="tab-cal" class="tab-page">
+  <div class="mini-nav" data-mini-tab="tab-cal"></div>
 
   <div class="card" data-card-id="cal-stack" data-card-label="Deep Life Stack">
     <div class="card-title" data-editable="title_cal">The Deep Life Stack &mdash; Cal Newport</div>
@@ -2041,6 +2073,7 @@ body {
 
 <!-- ==================== TAB 4: GROUNDING LIBRARY ==================== -->
 <section id="tab-library" class="tab-page">
+  <div class="mini-nav" data-mini-tab="tab-library"></div>
 
   <div class="card" data-card-id="lib-intro" data-card-label="What Grounds Me">
     <div class="card-title" data-editable="title_library">What Grounds Me</div>
@@ -4312,6 +4345,25 @@ function renderReorderPanels() {
   });
 }
 
+function initMiniNavs() {
+  document.querySelectorAll('.mini-nav').forEach(nav => {
+    const tabId = nav.dataset.miniTab;
+    const section = $(tabId);
+    if (!section) return;
+    nav.innerHTML = '';
+    const cards = section.querySelectorAll('[data-card-id]');
+    cards.forEach(card => {
+      const pill = document.createElement('button');
+      pill.className = 'mini-nav-pill';
+      pill.textContent = card.dataset.cardLabel || card.dataset.cardId;
+      pill.addEventListener('click', () => {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      nav.appendChild(pill);
+    });
+  });
+}
+
 function initReorder() {
   ['tab-dashboard', 'tab-habits', 'tab-challenges', 'tab-business', 'tab-cal', 'tab-library'].forEach(applyCardOrder);
   renderReorderPanels();
@@ -4326,6 +4378,7 @@ function init() {
   renderAllHabits();
   renderChallenges();
   renderTodos();
+  initMiniNavs();
   initReorder();
   renderFunnel();
   renderLinkTracker();
