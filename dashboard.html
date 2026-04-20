@@ -1544,6 +1544,7 @@ body {
 /* ======== MINI NAV ======== */
 .mini-nav {
   display: flex;
+  justify-content: center;
   gap: 6px;
   flex-wrap: wrap;
   margin-bottom: 16px;
@@ -1551,7 +1552,10 @@ body {
   top: 0;
   z-index: 10;
   background: var(--bg);
-  padding: 8px 0;
+  padding: 10px 0;
+}
+[data-card-id] {
+  scroll-margin-top: 60px;
 }
 .mini-nav-pill {
   padding: 4px 12px;
