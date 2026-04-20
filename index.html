@@ -1289,6 +1289,8 @@ body {
 .funnel-bar-wrap {
   flex: 1;
   position: relative;
+  display: flex;
+  justify-content: center;
 }
 .funnel-bar {
   height: 36px;
@@ -3753,9 +3755,6 @@ async function deleteLink(name) {
 
 // Funnel stage definitions
 const FUNNEL_STAGES = [
-  { id: 'views', label: 'Views', color: '#A8B5A0', manual: true },
-  { id: 'comments', label: 'Comments', color: '#B8C4AB', manual: true },
-  { id: 'link-sent', label: 'Link Sent', color: '#C4CDB8', manual: true },
   { id: 'link-click', label: 'Link Clicked', color: '#D4C5A9', manual: false },
   { id: 'landing', label: 'Landing Page', color: '#DEB99A', manual: false },
   { id: 'lead', label: 'Lead Captured', color: '#D4A484', manual: false },
