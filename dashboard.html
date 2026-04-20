@@ -99,8 +99,8 @@ body {
   margin: 0 auto;
   padding: 24px 40px 80px;
 }
-.tab-page { display: none; animation: fadeIn 0.3s ease; }
-.tab-page.active { display: block; }
+.tab-page { display: none !important; animation: fadeIn 0.3s ease; }
+.tab-page.active { display: flex !important; flex-direction: column; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 /* ======== CARDS ======== */
@@ -1594,9 +1594,6 @@ body {
 }
 .reorder-btn:hover { border-color: var(--terracotta); color: var(--terracotta); }
 .reorder-btn:disabled { opacity: 0.3; cursor: default; }
-/* Tab sections need flex for CSS order to work */
-.tab-page { display: none; }
-.tab-page.active { display: flex; flex-direction: column; }
 /* ======== WEIGHT LINE CHART ======== */
 .weight-line-chart {
   position: relative;
@@ -1732,6 +1729,7 @@ body {
 <nav class="tab-nav">
   <button class="tab-btn active" data-tab="tab-dashboard">Dashboard</button>
   <button class="tab-btn" data-tab="tab-habits">Habit Tracker</button>
+  <button class="tab-btn" data-tab="tab-challenges">Challenges</button>
   <button class="tab-btn" data-tab="tab-business">Building the Dream</button>
   <button class="tab-btn" data-tab="tab-cal">Cal's Framework</button>
   <button class="tab-btn" data-tab="tab-library">Grounding Library</button>
@@ -1744,6 +1742,7 @@ body {
 <section id="tab-dashboard" class="tab-page active">
 
   <div class="two-up-row readme-row" data-card-id="readme-morning" data-card-label="READ ME + Morning Ritual">
+    <div class="card readme-card">
       <div class="card-title" data-editable="title_readme">&#10071; READ ME!!</div>
       <div class="readme-scroll" data-editable="readme_content">
         <p class="readme-lead">You care deeply about connection.</p>
@@ -1796,12 +1795,6 @@ body {
     <div id="keystone-container" class="habit-grid-2col"></div>
   </div>
 
-  <!-- Challenges -->
-  <div class="card" data-card-id="challenges-dash" data-card-label="Challenges">
-    <div class="card-title" data-editable="title_challenges">Challenges</div>
-    <div id="challenges-container-dashboard"></div>
-  </div>
-
   <div class="reorder-panel" data-tab="tab-dashboard"></div>
 
 </section>
@@ -1831,12 +1824,6 @@ body {
     <div id="secondary-habits-container" class="habit-grid-2col"></div>
   </div>
 
-  <!-- Challenges -->
-  <div class="card" data-card-id="challenges-habits" data-card-label="Challenges">
-    <div class="card-title" data-editable="title_challenges_habits">Challenges</div>
-    <div id="challenges-container-habits"></div>
-  </div>
-
   <!-- Household -->
   <div class="card half-width" data-card-id="household" data-card-label="Household">
     <div class="card-title" data-editable="title_household">Household</div>
@@ -1847,7 +1834,19 @@ body {
 
 </section>
 
-<!-- ==================== TAB 3: BUILDING THE DREAM ==================== -->
+<!-- ==================== TAB 3: CHALLENGES ==================== -->
+<section id="tab-challenges" class="tab-page">
+
+  <div class="card" data-card-id="challenges-main" data-card-label="Challenges">
+    <div class="card-title" data-editable="title_challenges">Challenges</div>
+    <div id="challenges-container"></div>
+  </div>
+
+  <div class="reorder-panel" data-tab="tab-challenges"></div>
+
+</section>
+
+<!-- ==================== TAB 4: BUILDING THE DREAM ==================== -->
 <section id="tab-business" class="tab-page">
 
   <div class="card" data-card-id="business" data-card-label="Business Non-Negotiables">
@@ -3086,7 +3085,7 @@ let challengeAddOpen = {};
 const challengeUIState = {};
 
 function renderChallenges() {
-  ['challenges-container-dashboard', 'challenges-container-habits'].forEach(cid => {
+  ['challenges-container'].forEach(cid => {
     const container = $(cid);
     if (!container) return;
     container.innerHTML = '';
@@ -4308,7 +4307,7 @@ function renderReorderPanels() {
 }
 
 function initReorder() {
-  ['tab-dashboard', 'tab-habits', 'tab-business', 'tab-cal', 'tab-library'].forEach(applyCardOrder);
+  ['tab-dashboard', 'tab-habits', 'tab-challenges', 'tab-business', 'tab-cal', 'tab-library'].forEach(applyCardOrder);
   renderReorderPanels();
 }
 

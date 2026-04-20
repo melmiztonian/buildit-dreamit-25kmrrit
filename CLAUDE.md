@@ -104,7 +104,8 @@ Each `.habit-block` is a visually distinct sub-card inside a `.card`:
 
 | Tab ID | Nav label | Contents |
 |--------|-----------|----------|
-| `tab-dashboard` | Dashboard | READ ME!! + Morning Ritual + Keystone Habits + Challenges |
+| `tab-dashboard` | Dashboard | READ ME!! + Morning Ritual + Keystone Habits |
+| `tab-challenges` | Challenges | Challenge cards with countdown, checkboxes, weight tracking |
 | `tab-business` | Building the Dream | Daily Business Non-Negotiables (habit blocks, 2-col grid) + To-Do List + Revenue Tracker + Funnel (period-filtered) + Link Tracker (unique clicks) |
 | `tab-habits` | Habit Tracker | Synced Keystones + Secondary Fitness + Household — all habit blocks with add/delete |
 | `tab-cal` | Cal's Framework | Deep Life Stack timeline + 4 layers with checkboxes/textareas |
