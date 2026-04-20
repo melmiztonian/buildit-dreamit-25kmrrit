@@ -1271,90 +1271,93 @@ body {
 }
 .sharon-tpl-text:focus { border-color: var(--terracotta); }
 
-/* ======== FUNNEL ======== */
-.funnel-stages {
+/* ======== FUNNEL (horizontal pipeline) ======== */
+.funnel-pipeline {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sand) transparent;
+}
+.funnel-pipeline::-webkit-scrollbar { height: 6px; }
+.funnel-pipeline::-webkit-scrollbar-track { background: transparent; }
+.funnel-pipeline::-webkit-scrollbar-thumb { background: var(--sand); border-radius: 3px; }
+.funnel-col {
+  min-width: 180px;
+  max-width: 220px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  max-width: 700px;
-  margin: 0 auto;
 }
-.funnel-stage {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  position: relative;
-  padding: 10px 0;
-}
-.funnel-bar-wrap {
-  flex: 1;
-  position: relative;
-  display: flex;
-  justify-content: center;
-}
-.funnel-bar {
-  height: 36px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
+.funnel-col-header {
+  border-radius: 10px 10px 0 0;
+  padding: 10px 14px;
   color: #fff;
-  font-size: 0.78rem;
-  font-weight: 600;
-  position: relative;
-  overflow: hidden;
-  transition: width 0.4s ease;
-}
-.funnel-bar-label {
-  position: relative;
-  z-index: 1;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-.funnel-count {
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
-  position: relative;
-  z-index: 1;
-  padding-left: 10px;
-}
-.funnel-conv {
-  width: 52px;
-  text-align: right;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--muted);
-  flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
-}
-.funnel-input {
-  width: 70px;
-  height: 28px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  text-align: center;
-  font-family: inherit;
   font-size: 0.8rem;
-  background: var(--card);
-  color: var(--text);
-  outline: none;
-  flex-shrink: 0;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.funnel-col-count {
+  font-size: 1.1rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.funnel-input:focus { border-color: var(--terracotta); }
-.funnel-arrow {
-  text-align: center;
-  color: var(--sand);
-  font-size: 0.7rem;
-  padding: 2px 0;
-  max-width: 700px;
-  margin: 0 auto;
+.funnel-col-body {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  padding: 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 60px;
 }
-@media (max-width: 480px) {
-  .funnel-bar { height: 30px; font-size: 0.7rem; padding: 0 10px; }
-  .funnel-input { width: 56px; font-size: 0.75rem; }
-  .funnel-conv { width: 44px; font-size: 0.62rem; }
+.funnel-link-card {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.funnel-link-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-all;
+}
+.funnel-link-clicks {
+  font-size: 0.68rem;
+  color: var(--terracotta);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.funnel-link-dest {
+  font-size: 0.6rem;
+  color: var(--muted);
+  word-break: break-all;
+  margin-top: 2px;
+}
+.funnel-conv-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--sand);
+  font-size: 0.9rem;
+  min-width: 20px;
+  align-self: center;
+}
+.funnel-col-empty {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-style: italic;
+  text-align: center;
+  padding: 10px 0;
 }
 
 /* ======== LINK TRACKER ======== */
@@ -3829,24 +3832,28 @@ async function renderFunnel() {
   const filteredClicks = filterClicksByPeriod(_cachedClicks, funnelPeriod);
   const uniqueCounts = computeUniqueCounts(filteredClicks);
 
-  // Compute auto counts per funnel stage
-  const stageCounts = {};
-  FUNNEL_STAGES.forEach(s => { stageCounts[s.id] = 0; });
+  // Group links by funnel stage
+  const stageLinks = {};
+  FUNNEL_STAGES.forEach(s => { stageLinks[s.id] = []; });
   links.forEach(link => {
     const stage = link.funnel_stage || 'link-click';
-    stageCounts[stage] = (stageCounts[stage] || 0) + (uniqueCounts[link.name] || 0);
+    if (stageLinks[stage]) {
+      stageLinks[stage].push({ ...link, clicks: uniqueCounts[link.name] || 0 });
+    }
   });
 
-  // Manual values keyed by period
-  const manualKey = 'funnel_manual_' + funnelPeriod;
-  const manualData = LS.get(manualKey, {});
+  // Stage totals
+  const stageCounts = {};
+  FUNNEL_STAGES.forEach(s => {
+    stageCounts[s.id] = stageLinks[s.id].reduce((sum, l) => sum + l.clicks, 0);
+  });
 
   container.innerHTML = '';
 
   // Period selector
   const periodBar = document.createElement('div');
   periodBar.className = 'habit-view-tabs';
-  periodBar.style.marginBottom = '16px';
+  periodBar.style.cssText = 'margin-bottom:12px;justify-content:center;';
   const periods = [
     { id: 'today', label: 'Today' },
     { id: 'this-week', label: 'This Week' },
@@ -3868,72 +3875,67 @@ async function renderFunnel() {
   });
   container.appendChild(periodBar);
 
-  // Date range label
+  // Date range
   const { start, end } = getFunnelDateRange(funnelPeriod);
   const rangeLabel = document.createElement('div');
-  rangeLabel.style.cssText = 'font-size:0.72rem;color:var(--muted);text-align:center;margin-bottom:12px;';
+  rangeLabel.style.cssText = 'font-size:0.72rem;color:var(--muted);text-align:center;margin-bottom:14px;';
   rangeLabel.textContent = start === end ? start : start + ' \u2192 ' + end;
   container.appendChild(rangeLabel);
 
-  const stagesDiv = document.createElement('div');
-  stagesDiv.className = 'funnel-stages';
-
-  const maxVal = Math.max(1, ...FUNNEL_STAGES.map(s =>
-    s.manual ? (parseInt(manualData[s.id]) || 0) : stageCounts[s.id]
-  ));
+  // Horizontal pipeline
+  const pipeline = document.createElement('div');
+  pipeline.className = 'funnel-pipeline';
 
   FUNNEL_STAGES.forEach((stage, i) => {
-    const val = stage.manual ? (parseInt(manualData[stage.id]) || 0) : stageCounts[stage.id];
-    const pct = Math.max(20, (val / maxVal) * 100);
-    const prevVal = i > 0
-      ? (FUNNEL_STAGES[i-1].manual ? (parseInt(manualData[FUNNEL_STAGES[i-1].id]) || 0) : stageCounts[FUNNEL_STAGES[i-1].id])
-      : 0;
-    const convRate = (i > 0 && prevVal > 0) ? ((val / prevVal) * 100).toFixed(1) + '%' : '';
-
-    const row = document.createElement('div');
-    row.className = 'funnel-stage';
-
-    if (stage.manual) {
-      const inp = document.createElement('input');
-      inp.type = 'number';
-      inp.className = 'funnel-input';
-      inp.value = manualData[stage.id] || '';
-      inp.placeholder = '0';
-      inp.addEventListener('blur', () => {
-        const d = LS.get(manualKey, {});
-        d[stage.id] = parseInt(inp.value) || 0;
-        LS.set(manualKey, d);
-        renderFunnel();
-      });
-      row.appendChild(inp);
-    }
-
-    const barWrap = document.createElement('div');
-    barWrap.className = 'funnel-bar-wrap';
-    const bar = document.createElement('div');
-    bar.className = 'funnel-bar';
-    bar.style.width = pct + '%';
-    bar.style.background = stage.color;
-    bar.innerHTML = `<span class="funnel-bar-label">${stage.label}</span><span class="funnel-count">${val}</span>`;
-    barWrap.appendChild(bar);
-    row.appendChild(barWrap);
-
-    const conv = document.createElement('div');
-    conv.className = 'funnel-conv';
-    conv.textContent = convRate;
-    row.appendChild(conv);
-
-    stagesDiv.appendChild(row);
-
-    if (i < FUNNEL_STAGES.length - 1) {
+    // Arrow between columns
+    if (i > 0) {
       const arrow = document.createElement('div');
-      arrow.className = 'funnel-arrow';
-      arrow.textContent = '\u25BC';
-      stagesDiv.appendChild(arrow);
+      arrow.className = 'funnel-conv-arrow';
+      const prevCount = stageCounts[FUNNEL_STAGES[i-1].id];
+      const thisCount = stageCounts[stage.id];
+      const convRate = prevCount > 0 ? ((thisCount / prevCount) * 100).toFixed(0) + '%' : '';
+      arrow.innerHTML = '\u25B6' + (convRate ? '<br><span style="font-size:0.55rem;color:var(--muted);">' + convRate + '</span>' : '');
+      pipeline.appendChild(arrow);
     }
+
+    const col = document.createElement('div');
+    col.className = 'funnel-col';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'funnel-col-header';
+    header.style.background = stage.color;
+    header.innerHTML = `<span>${stage.label}</span><span class="funnel-col-count">${stageCounts[stage.id]}</span>`;
+    col.appendChild(header);
+
+    // Body — list of links in this stage
+    const body = document.createElement('div');
+    body.className = 'funnel-col-body';
+
+    const stLinks = stageLinks[stage.id].sort((a, b) => b.clicks - a.clicks);
+    if (stLinks.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'funnel-col-empty';
+      empty.textContent = 'No links yet';
+      body.appendChild(empty);
+    } else {
+      stLinks.forEach(link => {
+        const card = document.createElement('div');
+        card.className = 'funnel-link-card';
+        card.innerHTML = `
+          <div class="funnel-link-name">${link.name}</div>
+          <div class="funnel-link-clicks">${link.clicks} unique click${link.clicks !== 1 ? 's' : ''}</div>
+          <div class="funnel-link-dest">\u2192 ${link.destination}</div>
+        `;
+        body.appendChild(card);
+      });
+    }
+
+    col.appendChild(body);
+    pipeline.appendChild(col);
   });
 
-  container.appendChild(stagesDiv);
+  container.appendChild(pipeline);
 }
 
 async function renderLinkTracker() {
