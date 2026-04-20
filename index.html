@@ -3158,65 +3158,59 @@ function renderChallenges() {
 
       // Weight tracking (today)
       if (isActive) {
+        const weightUnit = LS.get('weight_unit', 'kg');
+        const kgToLbs = v => Math.round(v * 2.20462 * 10) / 10;
+        const lbsToKg = v => Math.round(v / 2.20462 * 10) / 10;
+        const toLbs = v => weightUnit === 'kg' ? kgToLbs(v) : v;
+        const fromLbs = v => weightUnit === 'kg' ? lbsToKg(v) : v;
+
         const weightData = LS.get('weight_' + ch.id, {});
         const wWrap = document.createElement('div');
         wWrap.className = 'challenge-weight';
-        wWrap.innerHTML = '<label>\u2696\uFE0F Today\'s weight:</label>';
+        const wLabel = document.createElement('label');
+        wLabel.textContent = '\u2696\uFE0F Today\'s weight:';
         const wInp = document.createElement('input');
         wInp.type = 'number';
         wInp.step = '0.1';
-        wInp.placeholder = 'lbs';
-        wInp.value = weightData[today] || '';
+        wInp.placeholder = weightUnit;
+        // Display in selected unit (stored as lbs)
+        wInp.value = weightData[today] ? fromLbs(weightData[today]) : '';
         wInp.addEventListener('blur', () => {
           const wd = LS.get('weight_' + ch.id, {});
-          if (wInp.value.trim()) { wd[today] = parseFloat(wInp.value); } else { delete wd[today]; }
+          if (wInp.value.trim()) { wd[today] = toLbs(parseFloat(wInp.value)); } else { delete wd[today]; }
           LS.set('weight_' + ch.id, wd);
           renderChallenges();
         });
+        // Unit toggle
+        const unitBtn = document.createElement('button');
+        unitBtn.className = 'habit-action-pill';
+        unitBtn.style.cssText = 'font-size:0.7rem;padding:3px 10px;';
+        unitBtn.textContent = weightUnit.toUpperCase();
+        unitBtn.addEventListener('click', () => {
+          LS.set('weight_unit', weightUnit === 'kg' ? 'lbs' : 'kg');
+          renderChallenges();
+        });
+        wWrap.appendChild(wLabel);
         wWrap.appendChild(wInp);
-        wWrap.innerHTML += '<span style="font-size:0.75rem;color:var(--muted);">lbs</span>';
-        // Re-attach the input event after innerHTML modification
+        wWrap.appendChild(unitBtn);
         card.appendChild(wWrap);
-        // Fix: innerHTML destroyed the input, re-render properly
-        card.removeChild(wWrap);
-        const wWrap2 = document.createElement('div');
-        wWrap2.className = 'challenge-weight';
-        const wLabel = document.createElement('label');
-        wLabel.textContent = '\u2696\uFE0F Today\'s weight:';
-        const wInp2 = document.createElement('input');
-        wInp2.type = 'number';
-        wInp2.step = '0.1';
-        wInp2.placeholder = 'lbs';
-        wInp2.value = weightData[today] || '';
-        wInp2.addEventListener('blur', () => {
-          const wd = LS.get('weight_' + ch.id, {});
-          if (wInp2.value.trim()) { wd[today] = parseFloat(wInp2.value); } else { delete wd[today]; }
-          LS.set('weight_' + ch.id, wd);
-          renderChallenges();
-        });
-        const wUnit = document.createElement('span');
-        wUnit.style.cssText = 'font-size:0.75rem;color:var(--muted);';
-        wUnit.textContent = 'lbs';
-        wWrap2.appendChild(wLabel);
-        wWrap2.appendChild(wInp2);
-        wWrap2.appendChild(wUnit);
-        card.appendChild(wWrap2);
 
-        // Weight chart
+        // Weight chart (always display in lbs)
         const allWeights = LS.get('weight_' + ch.id, {});
         const wDates = Object.keys(allWeights).sort();
         if (wDates.length > 1) {
           const chart = document.createElement('div');
           chart.className = 'weight-chart';
-          chart.innerHTML = '<div class="weight-chart-title">\uD83D\uDCC9 Weight Over Time</div>';
+          const displayUnit = weightUnit === 'kg' ? 'kg' : 'lbs';
+          chart.innerHTML = '<div class="weight-chart-title">\uD83D\uDCC9 Weight Over Time (' + displayUnit + ')</div>';
           const area = document.createElement('div');
           area.className = 'weight-chart-area';
-          const vals = wDates.map(d => allWeights[d]);
-          const minW = Math.min(...vals) - 1;
-          const maxW = Math.max(...vals) + 1;
+          const displayVals = wDates.map(d => fromLbs(allWeights[d]));
+          const minW = Math.min(...displayVals) - 1;
+          const maxW = Math.max(...displayVals) + 1;
           const range = maxW - minW || 1;
-          wDates.forEach(d => {
-            const v = allWeights[d];
+          wDates.forEach((d, i) => {
+            const v = displayVals[i];
             const h = Math.max(4, ((v - minW) / range) * 80);
             const bar = document.createElement('div');
             bar.className = 'weight-chart-bar';

@@ -144,7 +144,16 @@ Each `.habit-block` is a visually distinct sub-card inside a `.card`:
 
 Habits + year goals: water (365), running (3650 min), pull-ups (1600), push-ups (2500), hip thrusts (6700), tricep dips (2500), abs (261), full body gym (104), glute gym (104).
 
-**Challenges** — 30/60/90-day challenges with countdown, progress bar, and daily checkboxes. Each challenge has name, subtitle, frequency, duration, start/end dates. Data stored as `challenge_{id}_{weekStart}`. Synced to both Dashboard and Habit Tracker tabs. Default: Lite Keto Diet 30-day challenge starting 2026-04-20.
+**Challenges** — 30/60/90-day challenges on both Dashboard and Habit Tracker tabs. Each challenge card has:
+- Emoji status icon (fire=active, trophy=done, hourglass=upcoming)
+- Pill badges: countdown, frequency, X/Y days completed, success percentage
+- Editable subtitle/description
+- Progress bar based on completed days / total days
+- Week grid with daily checkboxes
+- Weight tracking input per day + chart over time (stored as `weight_{id}`)
+- Edit button opens inline form for all fields
+- Data stored as `challenge_{id}_{weekStart}` for checkboxes, `challenges` for definitions
+- Default: Lite Keto Diet 30-day challenge starting 2026-04-20
 
 **Household** — laundry (1x/week, 52/year), uses the same unified habit system.
 
