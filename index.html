@@ -2406,6 +2406,8 @@ function hWeekTotal(id, type) {
 }
 function hMonthTotal(id, type) {
   const now = new Date();
+  const habit = getActiveHabits().find(h => h.id === id);
+  const multi = habit && habit.dailyMulti;
   let total = 0;
   const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   for (let d = 1; d <= dim; d++) {
@@ -2413,13 +2415,16 @@ function hMonthTotal(id, type) {
     const ws = getWeekStart(localDateStr(dt));
     const di = dt.getDay();
     const wd = LS.get('habit_' + id + '_' + ws, Array(7).fill(0));
-    if (type === 'check') { if (wd[di] === 1 || wd[di] === true) total++; }
-    else { total += parseInt(wd[di]) || 0; }
+    if (type === 'check') {
+      if (multi ? (parseInt(wd[di]) || 0) >= multi : (wd[di] === 1 || wd[di] === true)) total++;
+    } else { total += parseInt(wd[di]) || 0; }
   }
   return total;
 }
 function hYearTotal(id, type) {
   const yr = new Date().getFullYear();
+  const habit = getActiveHabits().find(h => h.id === id);
+  const multi = habit && habit.dailyMulti;
   let total = 0;
   const jan1 = new Date(yr, 0, 1);
   const days = Math.floor((new Date(yr, 11, 31) - jan1) / 86400000) + 1;
@@ -2428,8 +2433,9 @@ function hYearTotal(id, type) {
     const ws = getWeekStart(localDateStr(dt));
     const di = dt.getDay();
     const wd = LS.get('habit_' + id + '_' + ws, Array(7).fill(0));
-    if (type === 'check') { if (wd[di] === 1 || wd[di] === true) total++; }
-    else { total += parseInt(wd[di]) || 0; }
+    if (type === 'check') {
+      if (multi ? (parseInt(wd[di]) || 0) >= multi : (wd[di] === 1 || wd[di] === true)) total++;
+    } else { total += parseInt(wd[di]) || 0; }
   }
   return total;
 }
