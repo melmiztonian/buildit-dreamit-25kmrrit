@@ -1130,52 +1130,6 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .challenge-weight input:focus { border-color: var(--terracotta); }
-.weight-chart {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
-  margin-bottom: 10px;
-}
-.weight-chart-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--muted);
-  margin-bottom: 8px;
-  text-align: center;
-}
-.weight-chart-area {
-  position: relative;
-  height: 100px;
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-}
-.weight-chart-bar {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  min-width: 0;
-}
-.weight-chart-fill {
-  width: 100%;
-  max-width: 20px;
-  background: var(--terracotta);
-  border-radius: 3px 3px 0 0;
-  transition: height 0.3s;
-}
-.weight-chart-val {
-  font-size: 0.5rem;
-  color: var(--terracotta);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.weight-chart-date {
-  font-size: 0.45rem;
-  color: var(--muted);
-}
 .challenge-add-form input,
 .challenge-add-form select {
   width: 100%;
@@ -1587,6 +1541,84 @@ body {
 }
 .countdown-goal input:focus { border-color: var(--terracotta); }
 
+/* ======== REORDER PANEL ======== */
+.reorder-panel {
+  margin-top: 16px;
+}
+.reorder-toggle {
+  background: none;
+  border: 1px dashed var(--sand);
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s;
+}
+.reorder-toggle:hover { border-color: var(--terracotta); color: var(--terracotta); }
+.reorder-list {
+  display: none;
+  margin-top: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+}
+.reorder-list.open { display: block; }
+.reorder-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+.reorder-item + .reorder-item { border-top: 1px solid #f0ebe3; }
+.reorder-item-label { flex: 1; }
+.reorder-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.reorder-btn:hover { border-color: var(--terracotta); color: var(--terracotta); }
+.reorder-btn:disabled { opacity: 0.3; cursor: default; }
+/* Tab sections need flex for CSS order to work */
+.tab-page { display: none; }
+.tab-page.active { display: flex; flex-direction: column; }
+/* ======== WEIGHT LINE CHART ======== */
+.weight-line-chart {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.weight-line-chart canvas {
+  width: 100%;
+  height: 120px;
+  display: block;
+}
+.weight-chart-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
 /* ======== INLINE EDITING ======== */
 [data-editable] {
   cursor: default;
@@ -1711,9 +1743,7 @@ body {
 <!-- ==================== TAB 1: DASHBOARD ==================== -->
 <section id="tab-dashboard" class="tab-page active">
 
-  <div class="two-up-row readme-row">
-    <!-- Read Me -->
-    <div class="card readme-card">
+  <div class="two-up-row readme-row" data-card-id="readme-morning" data-card-label="READ ME + Morning Ritual">
       <div class="card-title" data-editable="title_readme">&#10071; READ ME!!</div>
       <div class="readme-scroll" data-editable="readme_content">
         <p class="readme-lead">You care deeply about connection.</p>
@@ -1761,17 +1791,18 @@ body {
   </div>
 
   <!-- Keystone Habits -->
-  <div class="card" id="keystone-card">
+  <div class="card" id="keystone-card" data-card-id="keystones" data-card-label="Keystone Habits">
     <div class="card-title" data-editable="title_keystones">Keystone Habits &mdash; Year Map</div>
     <div id="keystone-container" class="habit-grid-2col"></div>
   </div>
 
-
   <!-- Challenges -->
-  <div class="card">
+  <div class="card" data-card-id="challenges-dash" data-card-label="Challenges">
     <div class="card-title" data-editable="title_challenges">Challenges</div>
     <div id="challenges-container-dashboard"></div>
   </div>
+
+  <div class="reorder-panel" data-tab="tab-dashboard"></div>
 
 </section>
 
@@ -1779,7 +1810,7 @@ body {
 <section id="tab-habits" class="tab-page">
 
   <!-- Countdown Bar -->
-  <div class="card countdown-bar">
+  <div class="card countdown-bar" data-card-id="countdown" data-card-label="Countdown">
     <div class="countdown-stats" id="countdown-stats"></div>
     <div class="countdown-goal">
       <label>Goal date:</label>
@@ -1788,48 +1819,50 @@ body {
   </div>
 
   <!-- Primary Keystones (synced) -->
-  <div class="card">
+  <div class="card" data-card-id="keystones-sync" data-card-label="Primary Keystones">
     <div class="card-title" data-editable="title_keystones_sync">Primary Keystones</div>
     <div class="card-subtitle">Same data as Dashboard &mdash; changes sync automatically.</div>
     <div id="keystone-container-sync" class="habit-grid-2col"></div>
   </div>
 
   <!-- Secondary Fitness -->
-  <div class="card">
+  <div class="card" data-card-id="secondary" data-card-label="Secondary Fitness">
     <div class="card-title" data-editable="title_secondary">Secondary Fitness Tracker</div>
     <div id="secondary-habits-container" class="habit-grid-2col"></div>
   </div>
 
   <!-- Challenges -->
-  <div class="card">
+  <div class="card" data-card-id="challenges-habits" data-card-label="Challenges">
     <div class="card-title" data-editable="title_challenges_habits">Challenges</div>
     <div id="challenges-container-habits"></div>
   </div>
 
   <!-- Household -->
-  <div class="card half-width">
+  <div class="card half-width" data-card-id="household" data-card-label="Household">
     <div class="card-title" data-editable="title_household">Household</div>
     <div id="household-habits-container"></div>
   </div>
+
+  <div class="reorder-panel" data-tab="tab-habits"></div>
 
 </section>
 
 <!-- ==================== TAB 3: BUILDING THE DREAM ==================== -->
 <section id="tab-business" class="tab-page">
 
-  <div class="card">
+  <div class="card" data-card-id="business" data-card-label="Business Non-Negotiables">
     <div class="card-title" data-editable="title_business">Daily Business Non-Negotiables</div>
     <div id="business-container" class="habit-grid-2col"></div>
   </div>
 
   <!-- To-Do List -->
-  <div class="card">
+  <div class="card" data-card-id="todo" data-card-label="To-Do List">
     <div class="card-title" data-editable="title_todo">To-Do List</div>
     <div id="todo-container"></div>
   </div>
 
   <!-- Revenue Tracker -->
-  <div class="card">
+  <div class="card" data-card-id="revenue" data-card-label="Revenue Tracker">
     <div class="card-title" data-editable="title_revenue">Revenue Tracker</div>
     <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">
       <span style="font-size:1.4rem;color:var(--muted);">$</span>
@@ -1857,24 +1890,26 @@ body {
   </div>
 
   <!-- Funnel -->
-  <div class="card">
+  <div class="card" data-card-id="funnel" data-card-label="Funnel">
     <div class="card-title" data-editable="title_funnel">Funnel</div>
     <div id="funnel-visual"></div>
   </div>
 
   <!-- Link Tracker -->
-  <div class="card">
+  <div class="card" data-card-id="links" data-card-label="Link Tracker">
     <div class="card-title" data-editable="title_links">Link Tracker</div>
     <div class="card-subtitle">Create trackable links. Share them anywhere. See every click.</div>
     <div id="link-tracker"></div>
   </div>
+
+  <div class="reorder-panel" data-tab="tab-business"></div>
 
 </section>
 
 <!-- ==================== TAB 4: CAL'S FRAMEWORK ==================== -->
 <section id="tab-cal" class="tab-page">
 
-  <div class="card">
+  <div class="card" data-card-id="cal-stack" data-card-label="Deep Life Stack">
     <div class="card-title" data-editable="title_cal">The Deep Life Stack &mdash; Cal Newport</div>
     <div class="card-subtitle">Every step, in order. Fill it in as you go.</div>
 
@@ -2000,18 +2035,21 @@ body {
     </div>
 
   </div>
+
+  <div class="reorder-panel" data-tab="tab-cal"></div>
+
 </section>
 
 <!-- ==================== TAB 4: GROUNDING LIBRARY ==================== -->
 <section id="tab-library" class="tab-page">
 
-  <div class="card">
+  <div class="card" data-card-id="lib-intro" data-card-label="What Grounds Me">
     <div class="card-title" data-editable="title_library">What Grounds Me</div>
     <div class="card-subtitle">Books, films, videos that reconnect me to what matters. Always working through one.</div>
   </div>
 
   <!-- Currently Active -->
-  <div class="card lib-active-card" id="lib-active-card">
+  <div class="card lib-active-card" id="lib-active-card" data-card-id="lib-active" data-card-label="Currently Active">
     <div class="card-title" data-editable="title_lib_active">Currently Active</div>
     <div id="lib-active-content">
       <p style="color:var(--muted);font-size:0.88rem;">No active item. Add one from the backlog below.</p>
@@ -2019,7 +2057,7 @@ body {
   </div>
 
   <!-- Backlog -->
-  <div class="card">
+  <div class="card" data-card-id="lib-backlog" data-card-label="Backlog">
     <div class="card-title" data-editable="title_lib_backlog">Backlog</div>
     <div id="lib-backlog-list"></div>
     <button class="btn-add" id="lib-add-btn" onclick="toggleAddForm()">+ Add new item</button>
@@ -2040,10 +2078,12 @@ body {
   </div>
 
   <!-- Archive -->
-  <div class="card">
+  <div class="card" data-card-id="lib-archive" data-card-label="Archive">
     <button class="archive-toggle" onclick="toggleArchive()">Archive <span id="archive-arrow">&#9654;</span></button>
     <div class="archive-list" id="lib-archive-list"></div>
   </div>
+
+  <div class="reorder-panel" data-tab="tab-library"></div>
 
 </section>
 
@@ -3195,34 +3235,88 @@ function renderChallenges() {
         wWrap.appendChild(unitBtn);
         card.appendChild(wWrap);
 
-        // Weight chart (always display in lbs)
+        // Weight chart — behind Show Details pill
         const allWeights = LS.get('weight_' + ch.id, {});
         const wDates = Object.keys(allWeights).sort();
-        if (wDates.length > 1) {
-          const chart = document.createElement('div');
-          chart.className = 'weight-chart';
-          const displayUnit = weightUnit === 'kg' ? 'kg' : 'lbs';
-          chart.innerHTML = '<div class="weight-chart-title">\uD83D\uDCC9 Weight Over Time (' + displayUnit + ')</div>';
-          const area = document.createElement('div');
-          area.className = 'weight-chart-area';
-          const displayVals = wDates.map(d => fromLbs(allWeights[d]));
-          const minW = Math.min(...displayVals) - 1;
-          const maxW = Math.max(...displayVals) + 1;
-          const range = maxW - minW || 1;
-          wDates.forEach((d, i) => {
-            const v = displayVals[i];
-            const h = Math.max(4, ((v - minW) / range) * 80);
-            const bar = document.createElement('div');
-            bar.className = 'weight-chart-bar';
-            bar.innerHTML = `
-              <div class="weight-chart-val">${v}</div>
-              <div class="weight-chart-fill" style="height:${h}px"></div>
-              <div class="weight-chart-date">${d.slice(5)}</div>
-            `;
-            area.appendChild(bar);
+        if (wDates.length >= 1) {
+          const chartActions = document.createElement('div');
+          chartActions.className = 'habit-actions';
+          const chartBtn = document.createElement('button');
+          chartBtn.className = 'habit-action-pill' + (ui.showWeightChart ? ' active' : '');
+          chartBtn.textContent = ui.showWeightChart ? 'Hide Weight Chart' : 'Show Weight Chart';
+          chartBtn.addEventListener('click', () => {
+            ui.showWeightChart = !ui.showWeightChart;
+            renderChallenges();
           });
-          chart.appendChild(area);
-          card.appendChild(chart);
+          chartActions.appendChild(chartBtn);
+          card.appendChild(chartActions);
+
+          if (ui.showWeightChart && wDates.length >= 2) {
+            const displayUnit = weightUnit === 'kg' ? 'kg' : 'lbs';
+            const displayVals = wDates.map(d => fromLbs(allWeights[d]));
+            const chartWrap = document.createElement('div');
+            chartWrap.className = 'weight-line-chart';
+            chartWrap.innerHTML = '<div class="weight-chart-title">\uD83D\uDCC9 Weight Over Time (' + displayUnit + ')</div>';
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 120;
+            chartWrap.appendChild(canvas);
+            card.appendChild(chartWrap);
+            // Draw line chart after DOM insertion
+            setTimeout(() => {
+              const ctx = canvas.getContext('2d');
+              const w = canvas.offsetWidth;
+              const h = canvas.offsetHeight;
+              canvas.width = w * 2; canvas.height = h * 2;
+              ctx.scale(2, 2);
+              const minW = Math.min(...displayVals) - 0.5;
+              const maxW = Math.max(...displayVals) + 0.5;
+              const range = maxW - minW || 1;
+              const padL = 36, padR = 10, padT = 10, padB = 20;
+              const plotW = w - padL - padR;
+              const plotH = h - padT - padB;
+              // Grid lines
+              ctx.strokeStyle = '#E0D6C8';
+              ctx.lineWidth = 0.5;
+              for (let g = 0; g <= 4; g++) {
+                const y = padT + (g / 4) * plotH;
+                ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+                ctx.fillStyle = '#8B7B6B';
+                ctx.font = '9px DM Sans';
+                ctx.textAlign = 'right';
+                const val = maxW - (g / 4) * range;
+                ctx.fillText(val.toFixed(1), padL - 4, y + 3);
+              }
+              // Line
+              ctx.strokeStyle = '#C47A5A';
+              ctx.lineWidth = 2;
+              ctx.lineJoin = 'round';
+              ctx.beginPath();
+              displayVals.forEach((v, i) => {
+                const x = padL + (i / Math.max(1, displayVals.length - 1)) * plotW;
+                const y = padT + ((maxW - v) / range) * plotH;
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+              });
+              ctx.stroke();
+              // Dots + date labels
+              displayVals.forEach((v, i) => {
+                const x = padL + (i / Math.max(1, displayVals.length - 1)) * plotW;
+                const y = padT + ((maxW - v) / range) * plotH;
+                ctx.fillStyle = '#C47A5A';
+                ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+                // Date label
+                ctx.fillStyle = '#8B7B6B';
+                ctx.font = '8px DM Sans';
+                ctx.textAlign = 'center';
+                ctx.fillText(wDates[i].slice(5), x, h - 4);
+              });
+            }, 50);
+          } else if (ui.showWeightChart && wDates.length < 2) {
+            const msg = document.createElement('div');
+            msg.style.cssText = 'font-size:0.78rem;color:var(--muted);text-align:center;padding:12px;';
+            msg.textContent = 'Add at least 2 weight entries to see the chart.';
+            card.appendChild(msg);
+          }
         }
       }
 
@@ -4122,6 +4216,102 @@ function toggleArchive() {
 /* ================================================================
    INIT
    ================================================================ */
+/* ================================================================
+   REORDER CARDS
+   ================================================================ */
+const reorderOpen = {};
+
+function getCardOrder(tabId) {
+  return LS.get('card_order_' + tabId, null);
+}
+
+function applyCardOrder(tabId) {
+  const section = $(tabId);
+  if (!section) return;
+  const order = getCardOrder(tabId);
+  if (!order) return;
+  const cards = section.querySelectorAll('[data-card-id]');
+  cards.forEach(card => {
+    const idx = order.indexOf(card.dataset.cardId);
+    card.style.order = idx >= 0 ? idx : 999;
+  });
+  // Reorder panel always last
+  const panel = section.querySelector('.reorder-panel');
+  if (panel) panel.style.order = 9999;
+}
+
+function renderReorderPanels() {
+  document.querySelectorAll('.reorder-panel').forEach(panel => {
+    const tabId = panel.dataset.tab;
+    const section = panel.closest('.tab-page');
+    if (!section) return;
+
+    panel.innerHTML = '';
+    const toggle = document.createElement('button');
+    toggle.className = 'reorder-toggle';
+    toggle.textContent = reorderOpen[tabId] ? '\u2699 Close reorder' : '\u2699 Reorder cards';
+    toggle.addEventListener('click', () => {
+      reorderOpen[tabId] = !reorderOpen[tabId];
+      renderReorderPanels();
+    });
+    panel.appendChild(toggle);
+
+    if (!reorderOpen[tabId]) return;
+
+    const cards = Array.from(section.querySelectorAll('[data-card-id]'));
+    // Sort by current CSS order
+    const currentOrder = getCardOrder(tabId) || cards.map(c => c.dataset.cardId);
+    cards.sort((a, b) => {
+      const ai = currentOrder.indexOf(a.dataset.cardId);
+      const bi = currentOrder.indexOf(b.dataset.cardId);
+      return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
+    });
+
+    const list = document.createElement('div');
+    list.className = 'reorder-list open';
+
+    cards.forEach((card, i) => {
+      const item = document.createElement('div');
+      item.className = 'reorder-item';
+      const label = document.createElement('span');
+      label.className = 'reorder-item-label';
+      label.textContent = card.dataset.cardLabel || card.dataset.cardId;
+      const upBtn = document.createElement('button');
+      upBtn.className = 'reorder-btn';
+      upBtn.textContent = '\u25B2';
+      upBtn.disabled = i === 0;
+      upBtn.addEventListener('click', () => {
+        const order = cards.map(c => c.dataset.cardId);
+        [order[i - 1], order[i]] = [order[i], order[i - 1]];
+        LS.set('card_order_' + tabId, order);
+        applyCardOrder(tabId);
+        renderReorderPanels();
+      });
+      const downBtn = document.createElement('button');
+      downBtn.className = 'reorder-btn';
+      downBtn.textContent = '\u25BC';
+      downBtn.disabled = i === cards.length - 1;
+      downBtn.addEventListener('click', () => {
+        const order = cards.map(c => c.dataset.cardId);
+        [order[i], order[i + 1]] = [order[i + 1], order[i]];
+        LS.set('card_order_' + tabId, order);
+        applyCardOrder(tabId);
+        renderReorderPanels();
+      });
+      item.appendChild(label);
+      item.appendChild(upBtn);
+      item.appendChild(downBtn);
+      list.appendChild(item);
+    });
+    panel.appendChild(list);
+  });
+}
+
+function initReorder() {
+  ['tab-dashboard', 'tab-habits', 'tab-business', 'tab-cal', 'tab-library'].forEach(applyCardOrder);
+  renderReorderPanels();
+}
+
 function init() {
   updateDate();
   checkDailyReset();
@@ -4131,6 +4321,7 @@ function init() {
   renderAllHabits();
   renderChallenges();
   renderTodos();
+  initReorder();
   renderFunnel();
   renderLinkTracker();
   initRevenue();
