@@ -3905,7 +3905,19 @@ async function renderFunnel() {
     const header = document.createElement('div');
     header.className = 'funnel-col-header';
     header.style.background = stage.color;
-    header.innerHTML = `<span>${stage.label}</span><span class="funnel-col-count">${stageCounts[stage.id]}</span>`;
+    const savedLabel = LS.get('funnel_label_' + stage.id, stage.label);
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = savedLabel;
+    labelSpan.setAttribute('contenteditable', 'true');
+    labelSpan.setAttribute('spellcheck', 'false');
+    labelSpan.style.outline = 'none';
+    labelSpan.addEventListener('blur', () => { LS.set('funnel_label_' + stage.id, labelSpan.textContent); });
+    labelSpan.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); labelSpan.blur(); } });
+    const countSpan = document.createElement('span');
+    countSpan.className = 'funnel-col-count';
+    countSpan.textContent = stageCounts[stage.id];
+    header.appendChild(labelSpan);
+    header.appendChild(countSpan);
     col.appendChild(header);
 
     // Body — list of links in this stage
