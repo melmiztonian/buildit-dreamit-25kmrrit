@@ -3943,11 +3943,20 @@ async function renderFunnel() {
       stLinks.forEach(link => {
         const card = document.createElement('div');
         card.className = 'funnel-link-card';
+        card.style.cursor = 'pointer';
         card.innerHTML = `
           <div class="funnel-link-name">${link.name}</div>
           <div class="funnel-link-clicks">${link.clicks} unique click${link.clicks !== 1 ? 's' : ''}</div>
           <div class="funnel-link-dest">\u2192 ${link.destination}</div>
         `;
+        card.addEventListener('click', () => {
+          const target = document.getElementById('link-item-' + link.name);
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            target.style.boxShadow = '0 0 0 3px var(--terracotta)';
+            setTimeout(() => { target.style.boxShadow = ''; }, 2000);
+          }
+        });
         body.appendChild(card);
       });
     }
@@ -4094,6 +4103,9 @@ async function renderLinkTracker() {
   for (const link of links) {
     const item = document.createElement('div');
     item.className = 'link-item';
+    item.id = 'link-item-' + link.name;
+    item.style.scrollMarginTop = '60px';
+    item.style.transition = 'box-shadow 0.3s';
     const clickCount = uniqueCounts[link.name] || 0;
     const trackUrl = LINK_BASE + encodeURIComponent(link.name);
     const stageName = (FUNNEL_STAGES.find(s => s.id === link.funnel_stage) || {}).label || link.funnel_stage || 'Link Click';
