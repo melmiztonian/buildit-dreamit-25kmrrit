@@ -4097,6 +4097,7 @@ async function renderLinkTracker() {
     const clickCount = uniqueCounts[link.name] || 0;
     const trackUrl = LINK_BASE + encodeURIComponent(link.name);
     const stageName = (FUNNEL_STAGES.find(s => s.id === link.funnel_stage) || {}).label || link.funnel_stage || 'Link Click';
+    const meta = LS.get('link_meta_' + link.name, {});
 
     // Header
     const hdr = document.createElement('div');
@@ -4108,15 +4109,16 @@ async function renderLinkTracker() {
     `;
     item.appendChild(hdr);
 
-    // URLs
+    // URLs + meta
     const urlDiv = document.createElement('div');
-    urlDiv.innerHTML = `
-      <div class="link-url">${trackUrl}</div>
-      <div class="link-dest">&rarr; ${link.destination}</div>
-    `;
+    urlDiv.style.cssText = 'margin-bottom:6px;';
+    let urlHtml = `<div class="link-url">${trackUrl}</div><div class="link-dest">\u2192 ${link.destination}</div>`;
+    if (meta.shopify_link) urlHtml += `<div class="link-dest" style="color:var(--sage);">\uD83D\uDED2 ${meta.shopify_link}</div>`;
+    if (meta.video_urls) urlHtml += `<div class="link-dest" style="color:var(--terracotta);">\uD83C\uDFA5 ${meta.video_urls}</div>`;
+    urlDiv.innerHTML = urlHtml;
     item.appendChild(urlDiv);
 
-    // Actions
+    // Actions row 1
     const actions = document.createElement('div');
     actions.className = 'link-actions';
     const copyBtn = document.createElement('button');
@@ -4128,9 +4130,16 @@ async function renderLinkTracker() {
         setTimeout(() => { copyBtn.textContent = 'Copy Link'; }, 1500);
       });
     });
+    const editBtn = document.createElement('button');
+    editBtn.className = 'habit-action-pill' + (linkStatsOpen[link.name + '_edit'] ? ' active' : '');
+    editBtn.textContent = linkStatsOpen[link.name + '_edit'] ? 'Close' : 'Edit';
+    editBtn.addEventListener('click', () => {
+      linkStatsOpen[link.name + '_edit'] = !linkStatsOpen[link.name + '_edit'];
+      renderLinkTracker();
+    });
     const embedBtn = document.createElement('button');
     embedBtn.className = 'habit-action-pill';
-    embedBtn.textContent = 'Embed Code';
+    embedBtn.textContent = 'Embed';
     embedBtn.addEventListener('click', () => {
       linkStatsOpen[link.name + '_embed'] = !linkStatsOpen[link.name + '_embed'];
       renderLinkTracker();
@@ -4147,10 +4156,40 @@ async function renderLinkTracker() {
     delBtn.textContent = 'Delete';
     delBtn.addEventListener('click', () => deleteLink(link.name));
     actions.appendChild(copyBtn);
+    actions.appendChild(editBtn);
     actions.appendChild(embedBtn);
     actions.appendChild(statsBtn);
     actions.appendChild(delBtn);
     item.appendChild(actions);
+
+    // Edit panel
+    if (linkStatsOpen[link.name + '_edit']) {
+      const ep = document.createElement('div');
+      ep.style.cssText = 'margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;';
+      ep.innerHTML = `
+        <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Video URLs (IG reels, comma-separated)</label>
+        <input type="text" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;" value="${(meta.video_urls || '').replace(/"/g, '&quot;')}" data-f="video_urls">
+        <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Shopify shortened link (the link you actually send)</label>
+        <input type="text" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;" value="${(meta.shopify_link || '').replace(/"/g, '&quot;')}" data-f="shopify_link">
+        <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Notes</label>
+        <textarea style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;resize:vertical;min-height:40px;">${(meta.notes || '')}</textarea>
+      `;
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'habit-action-pill';
+      saveBtn.style.marginTop = '8px';
+      saveBtn.textContent = 'Save';
+      saveBtn.addEventListener('click', () => {
+        const m = LS.get('link_meta_' + link.name, {});
+        m.video_urls = ep.querySelector('[data-f="video_urls"]').value.trim();
+        m.shopify_link = ep.querySelector('[data-f="shopify_link"]').value.trim();
+        m.notes = ep.querySelector('textarea').value.trim();
+        LS.set('link_meta_' + link.name, m);
+        linkStatsOpen[link.name + '_edit'] = false;
+        renderLinkTracker();
+      });
+      ep.appendChild(saveBtn);
+      item.appendChild(ep);
+    }
 
     // Embed code panel
     if (linkStatsOpen[link.name + '_embed']) {
@@ -4181,33 +4220,36 @@ async function renderLinkTracker() {
       item.appendChild(embedPanel);
     }
 
-    // Stats panel
+    // Stats panel with click log
     if (linkStatsOpen[link.name]) {
-      const clicks = getUniqueClicksForLink(allClicks, link.name);
+      const rawClicks = allClicks.filter(c => c.link_name === link.name).sort((a, b) => b.clicked_at.localeCompare(a.clicked_at));
+      const uniqueClicks = getUniqueClicksForLink(allClicks, link.name);
       const statsPanel = document.createElement('div');
       statsPanel.className = 'link-stats open';
 
-      if (!clicks.length) {
+      if (!rawClicks.length) {
         statsPanel.innerHTML = '<p style="color:var(--muted);font-size:0.78rem;">No clicks yet.</p>';
       } else {
         const today = todayStr();
-        const todayClicks = clicks.filter(c => c.clicked_at.slice(0, 10) === today).length;
+        const todayClicks = uniqueClicks.filter(c => c.clicked_at.slice(0, 10) === today).length;
         const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
-        const weekClicks = clicks.filter(c => new Date(c.clicked_at) >= weekAgo).length;
+        const weekClicks = uniqueClicks.filter(c => new Date(c.clicked_at) >= weekAgo).length;
 
         const sources = {};
-        clicks.forEach(c => {
-          const s = c.utm_source || (c.referrer ? new URL(c.referrer).hostname : null) || 'direct';
+        uniqueClicks.forEach(c => {
+          let s = c.utm_source || 'direct';
+          if (!c.utm_source && c.referrer) { try { s = new URL(c.referrer).hostname; } catch {} }
           sources[s] = (sources[s] || 0) + 1;
         });
         const topSource = Object.entries(sources).sort((a, b) => b[1] - a[1])[0];
 
+        // Summary cards
         const grid = document.createElement('div');
         grid.className = 'link-stats-grid';
         grid.innerHTML = `
           <div class="link-stat-card"><div class="link-stat-num">${todayClicks}</div><div class="link-stat-label">Today</div></div>
           <div class="link-stat-card"><div class="link-stat-num">${weekClicks}</div><div class="link-stat-label">This week</div></div>
-          <div class="link-stat-card"><div class="link-stat-num">${clickCount}</div><div class="link-stat-label">All time</div></div>
+          <div class="link-stat-card"><div class="link-stat-num">${clickCount}</div><div class="link-stat-label">All time (unique)</div></div>
         `;
         statsPanel.appendChild(grid);
 
@@ -4218,17 +4260,17 @@ async function renderLinkTracker() {
           statsPanel.appendChild(srcDiv);
         }
 
-        // Daily chart (last 7 days)
+        // Daily chart
         const chart = document.createElement('div');
         chart.className = 'link-daily-chart';
         const maxDaily = Math.max(1, ...Array.from({ length: 7 }, (_, i) => {
           const d = new Date(); d.setDate(d.getDate() - (6 - i));
-          return clicks.filter(c => c.clicked_at.slice(0, 10) === localDateStr(d)).length;
+          return uniqueClicks.filter(c => c.clicked_at.slice(0, 10) === localDateStr(d)).length;
         }));
         for (let i = 0; i < 7; i++) {
           const d = new Date(); d.setDate(d.getDate() - (6 - i));
           const ds = localDateStr(d);
-          const dayCount = clicks.filter(c => c.clicked_at.slice(0, 10) === ds).length;
+          const dayCount = uniqueClicks.filter(c => c.clicked_at.slice(0, 10) === ds).length;
           const col = document.createElement('div');
           col.className = 'link-daily-bar';
           col.innerHTML = `
@@ -4239,6 +4281,55 @@ async function renderLinkTracker() {
           chart.appendChild(col);
         }
         statsPanel.appendChild(chart);
+
+        // Click log table
+        const logTitle = document.createElement('div');
+        logTitle.style.cssText = 'font-size:0.78rem;font-weight:600;color:var(--text);margin-top:12px;margin-bottom:6px;';
+        logTitle.textContent = 'Click log (' + rawClicks.length + ' total, ' + clickCount + ' unique)';
+        statsPanel.appendChild(logTitle);
+
+        const tableWrap = document.createElement('div');
+        tableWrap.style.cssText = 'overflow-x:auto;max-height:250px;overflow-y:auto;';
+        const parseUA = (ua) => {
+          if (!ua) return 'Unknown';
+          if (/iPhone/.test(ua)) return 'iPhone';
+          if (/iPad/.test(ua)) return 'iPad';
+          if (/Android/.test(ua)) return 'Android';
+          if (/Mac/.test(ua)) return 'Mac';
+          if (/Windows/.test(ua)) return 'Windows';
+          if (/Linux/.test(ua)) return 'Linux';
+          return 'Other';
+        };
+        let tableHtml = '<table style="width:100%;border-collapse:collapse;font-size:0.68rem;">';
+        tableHtml += '<thead><tr style="border-bottom:2px solid var(--border);text-align:left;">';
+        tableHtml += '<th style="padding:4px 6px;color:var(--muted);">Time</th>';
+        tableHtml += '<th style="padding:4px 6px;color:var(--muted);">Visitor</th>';
+        tableHtml += '<th style="padding:4px 6px;color:var(--muted);">Device</th>';
+        tableHtml += '<th style="padding:4px 6px;color:var(--muted);">Source</th>';
+        tableHtml += '<th style="padding:4px 6px;color:var(--muted);">Referrer</th>';
+        tableHtml += '</tr></thead><tbody>';
+        rawClicks.slice(0, 100).forEach(c => {
+          const time = new Date(c.clicked_at);
+          const timeStr = localDateStr(time) + ' ' + time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+          const device = parseUA(c.user_agent);
+          let source = c.utm_source || '';
+          if (c.utm_medium) source += (source ? '/' : '') + c.utm_medium;
+          if (!source) source = '\u2014';
+          let ref = '\u2014';
+          if (c.referrer) { try { ref = new URL(c.referrer).hostname; } catch { ref = c.referrer.slice(0, 30); } }
+          const vid = (c.visitor_id || '').slice(0, 10);
+          tableHtml += '<tr style="border-bottom:1px solid #f0ebe3;">';
+          tableHtml += '<td style="padding:4px 6px;white-space:nowrap;">' + timeStr + '</td>';
+          tableHtml += '<td style="padding:4px 6px;font-family:monospace;color:var(--muted);">' + vid + '</td>';
+          tableHtml += '<td style="padding:4px 6px;">' + device + '</td>';
+          tableHtml += '<td style="padding:4px 6px;">' + source + '</td>';
+          tableHtml += '<td style="padding:4px 6px;color:var(--muted);">' + ref + '</td>';
+          tableHtml += '</tr>';
+        });
+        tableHtml += '</tbody></table>';
+        if (rawClicks.length > 100) tableHtml += '<div style="font-size:0.65rem;color:var(--muted);margin-top:4px;">Showing first 100 of ' + rawClicks.length + '</div>';
+        tableWrap.innerHTML = tableHtml;
+        statsPanel.appendChild(tableWrap);
       }
       item.appendChild(statsPanel);
     }
