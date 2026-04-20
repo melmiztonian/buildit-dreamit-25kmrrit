@@ -288,6 +288,43 @@ body {
   font-size: 14px;
   line-height: 1;
 }
+/* Water multi-check */
+.hw-multi-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  max-width: 40px;
+  margin: 0 auto;
+}
+.hw-multi-check {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1.5px solid var(--sand);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, border-color 0.2s;
+}
+.hw-multi-check.checked {
+  background: var(--terracotta);
+  border-color: var(--terracotta);
+}
+.hw-multi-check.checked::after {
+  content: '\2713';
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+}
+.hw-multi-check:hover { border-color: var(--terracotta); }
+.hw-multi-label {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 0.5rem;
+  color: var(--muted);
+  margin-top: 1px;
+}
 .hw-num-input {
   width: 100%;
   max-width: 52px;
@@ -992,6 +1029,99 @@ body {
 .archive-item .a-title { text-decoration: line-through; }
 .archive-item .a-date { font-size: 0.75rem; margin-left: 8px; }
 
+/* ======== CHALLENGES ======== */
+.challenge-card {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+}
+.challenge-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.challenge-name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+.challenge-countdown {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--terracotta);
+  background: rgba(196, 122, 90, 0.1);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.challenge-subtitle {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-style: italic;
+  margin-bottom: 8px;
+}
+.challenge-freq {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--sage);
+  background: rgba(168, 181, 160, 0.15);
+  padding: 2px 10px;
+  border-radius: 12px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.challenge-dates {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.challenge-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.challenge-progress-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--sand-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.challenge-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--sage), var(--terracotta));
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.challenge-progress-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--terracotta);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.challenge-add-form input,
+.challenge-add-form select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  margin-bottom: 8px;
+}
+.challenge-add-form input:focus,
+.challenge-add-form select:focus { border-color: var(--terracotta); }
+
 /* ======== TO-DO LIST ======== */
 .todo-item {
   background: var(--bg);
@@ -1567,6 +1697,12 @@ body {
   </div>
 
 
+  <!-- Challenges -->
+  <div class="card">
+    <div class="card-title" data-editable="title_challenges">Challenges</div>
+    <div id="challenges-container-dashboard"></div>
+  </div>
+
 </section>
 
 <!-- ==================== TAB 2: HABIT TRACKER ==================== -->
@@ -1592,6 +1728,12 @@ body {
   <div class="card">
     <div class="card-title" data-editable="title_secondary">Secondary Fitness Tracker</div>
     <div id="secondary-habits-container" class="habit-grid-2col"></div>
+  </div>
+
+  <!-- Challenges -->
+  <div class="card">
+    <div class="card-title" data-editable="title_challenges_habits">Challenges</div>
+    <div id="challenges-container-habits"></div>
   </div>
 
   <!-- Household -->
@@ -2120,7 +2262,7 @@ const ALL_HABITS = [
   { id: 'tricepdips', name: 'Tricep dips', emoji: '\uD83D\uDCAA', weekTarget: 48, yearGoal: 2500, unit: 'reps/week', type: 'number', group: 'secondary' },
   { id: 'pushups', name: 'Push-ups', emoji: '\uD83E\uDD38', weekTarget: 48, yearGoal: 2500, unit: 'reps/week', type: 'number', group: 'secondary' },
   { id: 'hipthrusts', name: 'Hip thrusts', emoji: '\uD83C\uDF51', weekTarget: 128, yearGoal: 6700, unit: 'reps/week', type: 'number', group: 'secondary' },
-  { id: 'water', name: '3L water', emoji: '\uD83D\uDCA7', weekTarget: 7, yearGoal: 365, unit: 'x/week', type: 'check', group: 'secondary' },
+  { id: 'water', name: '3L water', emoji: '\uD83D\uDCA7', weekTarget: 7, yearGoal: 365, unit: 'x/week', type: 'check', group: 'secondary', dailyMulti: 4, multiLabel: '750mL' },
   { id: 'fullbody', name: 'Full body gym day', emoji: '\uD83C\uDFCB\uFE0F', weekTarget: 2, yearGoal: 104, unit: 'x/week', type: 'check', group: 'secondary' },
   { id: 'glute', name: 'Glute gym day', emoji: '\uD83C\uDF51', weekTarget: 2, yearGoal: 104, unit: 'x/week', type: 'check', group: 'secondary' },
   // Household
@@ -2146,9 +2288,12 @@ function hSetStart(id, v) { LS.set('habit_' + id + '_start', v); }
 
 function hWeekTotal(id, type) {
   const wd = hGetWeek(id);
-  return type === 'check'
-    ? wd.filter(v => v === 1 || v === true).length
-    : wd.reduce((a, b) => a + (parseInt(b) || 0), 0);
+  const habit = getActiveHabits().find(h => h.id === id);
+  const multi = habit && habit.dailyMulti;
+  if (type === 'check') {
+    return wd.filter(v => multi ? (parseInt(v) || 0) >= multi : (v === 1 || v === true)).length;
+  }
+  return wd.reduce((a, b) => a + (parseInt(b) || 0), 0);
 }
 function hMonthTotal(id, type) {
   const now = new Date();
@@ -2183,7 +2328,12 @@ function hDayFilled(id, type, dateStr) {
   const ws = getWeekStart(dateStr);
   const di = new Date(dateStr + 'T12:00:00').getDay();
   const wd = LS.get('habit_' + id + '_' + ws, Array(7).fill(0));
-  return type === 'check' ? (wd[di] === 1 || wd[di] === true) : ((parseInt(wd[di]) || 0) > 0);
+  const habit = getActiveHabits().find(h => h.id === id);
+  const multi = habit && habit.dailyMulti;
+  if (type === 'check') {
+    return multi ? (parseInt(wd[di]) || 0) >= multi : (wd[di] === 1 || wd[di] === true);
+  }
+  return (parseInt(wd[di]) || 0) > 0;
 }
 function hToggleDay(id, type, dateStr) {
   const ws = getWeekStart(dateStr);
@@ -2378,12 +2528,44 @@ function renderHabitBlock(h, container, renderAllFn) {
     col.appendChild(lbl);
     col.appendChild(dateLbl);
 
-    if (h.type === 'check') {
+    if (h.dailyMulti && localDateStr(dayDate) === today) {
+      // Multi-check for today (e.g. 4x 750mL water bottles)
+      const multiCount = h.dailyMulti;
+      const currentVal = parseInt(weekData[di]) || 0;
+      const multiWrap = document.createElement('div');
+      multiWrap.className = 'hw-multi-wrap';
+      for (let m = 0; m < multiCount; m++) {
+        const mChk = document.createElement('div');
+        mChk.className = 'hw-multi-check' + (m < currentVal ? ' checked' : '');
+        mChk.title = h.multiLabel || '';
+        mChk.addEventListener('click', () => {
+          const wd = hGetWeek(h.id);
+          const cur = parseInt(wd[di]) || 0;
+          // Toggle: if clicking one that's already checked, uncheck from there; else check up to here
+          wd[di] = (m < cur) ? m : m + 1;
+          hSetWeek(h.id, wd);
+          renderAllFn();
+        });
+        multiWrap.appendChild(mChk);
+      }
+      const mLabel = document.createElement('div');
+      mLabel.className = 'hw-multi-label';
+      mLabel.textContent = h.multiLabel || '';
+      multiWrap.appendChild(mLabel);
+      col.appendChild(multiWrap);
+    } else if (h.type === 'check') {
+      const isChecked = h.dailyMulti
+        ? (parseInt(weekData[di]) || 0) >= h.dailyMulti
+        : (weekData[di] === 1 || weekData[di] === true);
       const chk = document.createElement('div');
-      chk.className = 'hw-check' + ((weekData[di] === 1 || weekData[di] === true) ? ' checked' : '');
+      chk.className = 'hw-check' + (isChecked ? ' checked' : '');
       chk.addEventListener('click', () => {
         const wd = hGetWeek(h.id);
-        wd[di] = (wd[di] === 1 || wd[di] === true) ? 0 : 1;
+        if (h.dailyMulti) {
+          wd[di] = (parseInt(wd[di]) || 0) >= h.dailyMulti ? 0 : h.dailyMulti;
+        } else {
+          wd[di] = (wd[di] === 1 || wd[di] === true) ? 0 : 1;
+        }
         hSetWeek(h.id, wd);
         renderAllFn();
       });
@@ -2743,6 +2925,240 @@ function renderAllHabits() {
 }
 
 /* (daily non-negotiables converted to habit blocks in ALL_HABITS with group: 'business') */
+
+/* ================================================================
+   CHALLENGES
+   ================================================================ */
+const DEFAULT_CHALLENGES = [
+  {
+    id: 'lite-keto',
+    name: 'Lite Keto Diet',
+    subtitle: 'No carbs except in protein smoothie and whatever\'s in random sauces',
+    freq: 5,
+    unit: 'x/week',
+    startDate: '2026-04-20',
+    days: 30,
+    type: 'check'
+  }
+];
+
+function getChallenges() {
+  return LS.get('challenges', DEFAULT_CHALLENGES);
+}
+function setChallenges(c) { LS.set('challenges', c); }
+
+function getChallengeWeekData(id, weekStart) {
+  return LS.get('challenge_' + id + '_' + weekStart, Array(7).fill(0));
+}
+function setChallengeWeekData(id, weekStart, data) {
+  LS.set('challenge_' + id + '_' + weekStart, data);
+}
+
+function challengeDaysCompleted(ch) {
+  const start = new Date(ch.startDate + 'T12:00:00');
+  const end = new Date(start);
+  end.setDate(end.getDate() + ch.days - 1);
+  const today = new Date(todayStr() + 'T12:00:00');
+  let count = 0;
+  const d = new Date(start);
+  while (d <= today && d <= end) {
+    const ds = localDateStr(d);
+    const ws = getWeekStart(ds);
+    const di = d.getDay();
+    const wd = LS.get('challenge_' + ch.id + '_' + ws, Array(7).fill(0));
+    if (wd[di] === 1 || wd[di] === true) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
+let challengeAddOpen = {};
+
+function renderChallenges() {
+  ['challenges-container-dashboard', 'challenges-container-habits'].forEach(cid => {
+    const container = $(cid);
+    if (!container) return;
+    container.innerHTML = '';
+    const challenges = getChallenges();
+    const today = todayStr();
+    const todayDate = new Date(today + 'T12:00:00');
+    const weekStartStr = getWeekStart(today);
+    const todayDayIdx = todayDate.getDay();
+
+    challenges.forEach((ch, ci) => {
+      const card = document.createElement('div');
+      card.className = 'challenge-card';
+
+      const startDate = new Date(ch.startDate + 'T12:00:00');
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + ch.days - 1);
+      const endDateStr = localDateStr(endDate);
+      const daysLeft = Math.max(0, Math.floor((endDate - todayDate) / 86400000) + 1);
+      const totalDays = ch.days;
+      const daysElapsed = totalDays - daysLeft;
+      const completed = challengeDaysCompleted(ch);
+      const pct = Math.min(100, (daysElapsed / totalDays) * 100);
+      const isActive = todayDate >= startDate && todayDate <= endDate;
+
+      // Header
+      const hdr = document.createElement('div');
+      hdr.className = 'challenge-header';
+      hdr.innerHTML = `
+        <span class="challenge-name">${ch.name}</span>
+        <span class="challenge-countdown">${isActive ? daysLeft + ' days left' : (todayDate > endDate ? 'Completed!' : 'Starts ' + ch.startDate)}</span>
+      `;
+      card.appendChild(hdr);
+
+      // Subtitle
+      if (ch.subtitle) {
+        const sub = document.createElement('div');
+        sub.className = 'challenge-subtitle';
+        sub.textContent = ch.subtitle;
+        card.appendChild(sub);
+      }
+
+      // Freq + dates
+      const freq = document.createElement('span');
+      freq.className = 'challenge-freq';
+      freq.textContent = ch.freq + ' ' + (ch.unit || 'x/week');
+      card.appendChild(freq);
+
+      const dates = document.createElement('div');
+      dates.className = 'challenge-dates';
+      dates.textContent = ch.startDate + ' \u2192 ' + endDateStr + ' \u00B7 ' + completed + '/' + totalDays + ' days done';
+      card.appendChild(dates);
+
+      // Progress bar
+      const prog = document.createElement('div');
+      prog.className = 'challenge-progress';
+      prog.innerHTML = `
+        <div class="challenge-progress-bar"><div class="challenge-progress-fill" style="width:${pct}%"></div></div>
+        <span class="challenge-progress-label">${Math.round(pct)}%</span>
+      `;
+      card.appendChild(prog);
+
+      // Today's week grid (same style as habits)
+      if (isActive) {
+        const weekData = getChallengeWeekData(ch.id, weekStartStr);
+        const weekGrid = document.createElement('div');
+        weekGrid.className = 'habit-week-grid';
+        const weekStart = new Date(weekStartStr + 'T12:00:00');
+        const dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+        dayLabels.forEach((d, di) => {
+          const col = document.createElement('div');
+          col.className = 'habit-week-col';
+          const dayDate = new Date(weekStart);
+          dayDate.setDate(dayDate.getDate() + di);
+          const dateNum = dayDate.getDate();
+          const ds = localDateStr(dayDate);
+          const inRange = dayDate >= startDate && dayDate <= endDate;
+
+          const lbl = document.createElement('div');
+          lbl.className = 'hw-day';
+          lbl.textContent = d;
+          const dateLbl = document.createElement('div');
+          dateLbl.className = 'hw-date';
+          dateLbl.textContent = dateNum;
+          col.appendChild(lbl);
+          col.appendChild(dateLbl);
+
+          if (inRange) {
+            const chk = document.createElement('div');
+            chk.className = 'hw-check' + ((weekData[di] === 1 || weekData[di] === true) ? ' checked' : '');
+            chk.addEventListener('click', () => {
+              const wd = getChallengeWeekData(ch.id, weekStartStr);
+              wd[di] = (wd[di] === 1 || wd[di] === true) ? 0 : 1;
+              setChallengeWeekData(ch.id, weekStartStr, wd);
+              renderChallenges();
+            });
+            col.appendChild(chk);
+          } else {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'width:34px;height:34px;margin:0 auto;';
+            col.appendChild(empty);
+          }
+
+          weekGrid.appendChild(col);
+        });
+        card.appendChild(weekGrid);
+      }
+
+      // Actions
+      const actions = document.createElement('div');
+      actions.className = 'habit-actions';
+      const delBtn = document.createElement('button');
+      delBtn.className = 'habit-action-pill danger';
+      delBtn.textContent = 'Delete';
+      delBtn.addEventListener('click', () => {
+        if (!confirm('Delete this challenge?')) return;
+        const c = getChallenges();
+        c.splice(ci, 1);
+        setChallenges(c);
+        renderChallenges();
+      });
+      actions.appendChild(delBtn);
+      card.appendChild(actions);
+
+      container.appendChild(card);
+    });
+
+    // Add challenge button
+    const addBtn = document.createElement('button');
+    addBtn.className = 'todo-add-btn';
+    addBtn.textContent = '+ Add challenge';
+    addBtn.addEventListener('click', () => {
+      challengeAddOpen[cid] = !challengeAddOpen[cid];
+      renderChallenges();
+    });
+    container.appendChild(addBtn);
+
+    if (challengeAddOpen[cid]) {
+      const form = document.createElement('div');
+      form.className = 'challenge-add-form';
+      form.style.cssText = 'background:var(--bg);border-radius:10px;padding:14px;margin-top:10px;';
+      form.innerHTML = `
+        <input type="text" data-f="name" placeholder="Challenge name">
+        <input type="text" data-f="subtitle" placeholder="Description (optional)">
+        <div class="hab-form-row">
+          <div><label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:3px;">Frequency</label><input type="number" data-f="freq" value="5" min="1"></div>
+          <div><label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:3px;">Duration (days)</label><input type="number" data-f="days" value="30" min="1"></div>
+        </div>
+        <div class="hab-form-row">
+          <div><label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:3px;">Start date</label><input type="date" data-f="start" value="${today}"></div>
+          <div><label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:3px;">Unit</label><input type="text" data-f="unit" value="x/week" placeholder="x/week"></div>
+        </div>
+        <div class="hab-form-actions">
+          <button class="btn-sm" data-action="create">Create</button>
+          <button class="btn-sm" data-action="cancel">Cancel</button>
+        </div>
+      `;
+      form.querySelector('[data-action="create"]').addEventListener('click', () => {
+        const name = form.querySelector('[data-f="name"]').value.trim();
+        if (!name) return;
+        const c = getChallenges();
+        c.push({
+          id: 'ch_' + Date.now(),
+          name,
+          subtitle: form.querySelector('[data-f="subtitle"]').value.trim(),
+          freq: parseInt(form.querySelector('[data-f="freq"]').value) || 5,
+          unit: form.querySelector('[data-f="unit"]').value.trim() || 'x/week',
+          startDate: form.querySelector('[data-f="start"]').value || today,
+          days: parseInt(form.querySelector('[data-f="days"]').value) || 30,
+          type: 'check'
+        });
+        setChallenges(c);
+        challengeAddOpen[cid] = false;
+        renderChallenges();
+      });
+      form.querySelector('[data-action="cancel"]').addEventListener('click', () => {
+        challengeAddOpen[cid] = false;
+        renderChallenges();
+      });
+      container.appendChild(form);
+    }
+  });
+}
 
 /* ================================================================
    TO-DO LIST
@@ -3525,6 +3941,7 @@ function init() {
   initCountdown();
   initTabs();
   renderAllHabits();
+  renderChallenges();
   renderTodos();
   renderFunnel();
   renderLinkTracker();
