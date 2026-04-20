@@ -1271,22 +1271,29 @@ body {
 }
 .sharon-tpl-text:focus { border-color: var(--terracotta); }
 
-/* ======== FUNNEL (horizontal pipeline) ======== */
+/* ======== FUNNEL (horizontal pipeline with branches) ======== */
 .funnel-pipeline {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 8px;
   scrollbar-width: thin;
   scrollbar-color: var(--sand) transparent;
+  align-items: flex-start;
 }
 .funnel-pipeline::-webkit-scrollbar { height: 6px; }
 .funnel-pipeline::-webkit-scrollbar-track { background: transparent; }
 .funnel-pipeline::-webkit-scrollbar-thumb { background: var(--sand); border-radius: 3px; }
+.funnel-row-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
 .funnel-col {
-  min-width: 180px;
-  max-width: 220px;
+  min-width: 170px;
+  max-width: 210px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -3757,14 +3764,35 @@ async function deleteLink(name) {
 }
 
 // Funnel stage definitions
-const FUNNEL_STAGES = [
-  { id: 'link-click', label: 'Link Clicked', color: '#D4C5A9', manual: false },
-  { id: 'landing', label: 'Landing Page', color: '#DEB99A', manual: false },
-  { id: 'lead', label: 'Lead Captured', color: '#D4A484', manual: false },
-  { id: 'tripwire', label: 'Tripwire Sale', color: '#C9896A', manual: false },
-  { id: 'email-click', label: 'Email Sequence Click', color: '#C47A5A', manual: false },
-  { id: 'hub-sale', label: 'Hub Sale', color: '#A85D3E', manual: false },
+// Funnel defined as rows of columns. Each row is rendered as a horizontal group.
+// Rows with multiple items represent parallel paths.
+const FUNNEL_ROWS = [
+  // Entry
+  [{ id: 'dm-link', label: 'DM Link', color: '#B8C4AB' }],
+  // Three parallel paths
+  [
+    { id: 'cp-page', label: 'CP Page', color: '#D4C5A9' },
+    { id: 'beta-page', label: 'Beta Page', color: '#C4CDB8' },
+    { id: 'hub-page', label: 'Hub Page ($27)', color: '#A85D3E' },
+  ],
+  // CP continues, Beta continues, Hub done
+  [
+    { id: 'cp-optin', label: 'CP Email Opt-in', color: '#DEB99A' },
+    { id: 'em-beta', label: 'Beta Email Seq', color: '#C4CDB8' },
+  ],
+  // CP splits into tripwire OR nurture
+  [
+    { id: 'tw-page', label: 'Tripwire ($19)', color: '#C9896A' },
+    { id: 'em-nurture', label: 'Nurture Emails', color: '#C47A5A' },
+  ],
+  // Nurture offer
+  [
+    { id: 'em-nurture-offer', label: 'Nurture Offer ($19)', color: '#A85D3E' },
+  ],
 ];
+
+// Flat list for link creation dropdown + click counting
+const FUNNEL_STAGES = FUNNEL_ROWS.flat();
 
 // Cache for fetched data so funnel + link tracker share it
 let _cachedLinks = null;
@@ -3882,26 +3910,10 @@ async function renderFunnel() {
   rangeLabel.textContent = start === end ? start : start + ' \u2192 ' + end;
   container.appendChild(rangeLabel);
 
-  // Horizontal pipeline
-  const pipeline = document.createElement('div');
-  pipeline.className = 'funnel-pipeline';
-
-  FUNNEL_STAGES.forEach((stage, i) => {
-    // Arrow between columns
-    if (i > 0) {
-      const arrow = document.createElement('div');
-      arrow.className = 'funnel-conv-arrow';
-      const prevCount = stageCounts[FUNNEL_STAGES[i-1].id];
-      const thisCount = stageCounts[stage.id];
-      const convRate = prevCount > 0 ? ((thisCount / prevCount) * 100).toFixed(0) + '%' : '';
-      arrow.innerHTML = '\u25B6' + (convRate ? '<br><span style="font-size:0.55rem;color:var(--muted);">' + convRate + '</span>' : '');
-      pipeline.appendChild(arrow);
-    }
-
+  // Helper to build a single funnel column
+  function buildCol(stage) {
     const col = document.createElement('div');
     col.className = 'funnel-col';
-
-    // Header
     const header = document.createElement('div');
     header.className = 'funnel-col-header';
     header.style.background = stage.color;
@@ -3915,16 +3927,13 @@ async function renderFunnel() {
     labelSpan.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); labelSpan.blur(); } });
     const countSpan = document.createElement('span');
     countSpan.className = 'funnel-col-count';
-    countSpan.textContent = stageCounts[stage.id];
+    countSpan.textContent = stageCounts[stage.id] || 0;
     header.appendChild(labelSpan);
     header.appendChild(countSpan);
     col.appendChild(header);
-
-    // Body — list of links in this stage
     const body = document.createElement('div');
     body.className = 'funnel-col-body';
-
-    const stLinks = stageLinks[stage.id].sort((a, b) => b.clicks - a.clicks);
+    const stLinks = (stageLinks[stage.id] || []).sort((a, b) => b.clicks - a.clicks);
     if (stLinks.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'funnel-col-empty';
@@ -3942,9 +3951,33 @@ async function renderFunnel() {
         body.appendChild(card);
       });
     }
-
     col.appendChild(body);
-    pipeline.appendChild(col);
+    return col;
+  }
+
+  // Horizontal pipeline with branching rows
+  const pipeline = document.createElement('div');
+  pipeline.className = 'funnel-pipeline';
+
+  FUNNEL_ROWS.forEach((row, ri) => {
+    // Arrow between row groups
+    if (ri > 0) {
+      const arrow = document.createElement('div');
+      arrow.className = 'funnel-conv-arrow';
+      arrow.textContent = '\u25B6';
+      pipeline.appendChild(arrow);
+    }
+
+    if (row.length === 1) {
+      // Single column
+      pipeline.appendChild(buildCol(row[0]));
+    } else {
+      // Multiple parallel paths — stack vertically
+      const group = document.createElement('div');
+      group.className = 'funnel-row-group';
+      row.forEach(stage => group.appendChild(buildCol(stage)));
+      pipeline.appendChild(group);
+    }
   });
 
   container.appendChild(pipeline);
@@ -3978,7 +4011,7 @@ async function renderLinkTracker() {
     const savedGuide = LS.get('link_naming_guide', null);
     if (savedGuide) { guide.innerHTML = savedGuide; } else {
     guide.innerHTML = `
-      <div style="font-weight:700;font-size:1rem;margin-bottom:12px;">Link Naming Format Guide</div>
+      <div style="font-weight:700;font-size:1rem;margin-bottom:12px;">Full Link Naming Format Guide</div>
       <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
         <thead>
           <tr style="text-align:left;border-bottom:2px solid var(--border);">
@@ -3989,14 +4022,29 @@ async function renderLinkTracker() {
         </thead>
         <tbody>
           <tr style="border-bottom:1px solid #f0ebe3;">
+            <td style="padding:8px 10px;">IG link</td>
+            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">ig-{placement}-{date?}</td>
+            <td style="padding:8px 10px;"><span class="challenge-pill freq">ig-bio</span> <span class="challenge-pill freq">ig-story-apr20</span></td>
+          </tr>
+          <tr style="border-bottom:1px solid #f0ebe3;">
             <td style="padding:8px 10px;">DM link</td>
             <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">dm-{cta-word}-{version}</td>
             <td style="padding:8px 10px;"><span class="challenge-pill freq">dm-connect-v1</span></td>
           </tr>
           <tr style="border-bottom:1px solid #f0ebe3;">
-            <td style="padding:8px 10px;">Landing page</td>
-            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">{page}-{section}-{cta}</td>
+            <td style="padding:8px 10px;">CP page</td>
+            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">cp-{section}-{cta}</td>
             <td style="padding:8px 10px;"><span class="challenge-pill freq">cp-hero-download</span></td>
+          </tr>
+          <tr style="border-bottom:1px solid #f0ebe3;">
+            <td style="padding:8px 10px;">Beta page</td>
+            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">beta-{section}-{cta}</td>
+            <td style="padding:8px 10px;"><span class="challenge-pill freq">beta-hero-join</span></td>
+          </tr>
+          <tr style="border-bottom:1px solid #f0ebe3;">
+            <td style="padding:8px 10px;">Hub page ($27)</td>
+            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">hub-{section}-{cta}</td>
+            <td style="padding:8px 10px;"><span class="challenge-pill freq">hub-hero-buy</span></td>
           </tr>
           <tr style="border-bottom:1px solid #f0ebe3;">
             <td style="padding:8px 10px;">Tripwire page</td>
@@ -4004,14 +4052,19 @@ async function renderLinkTracker() {
             <td style="padding:8px 10px;"><span class="challenge-pill freq">tw-hero-buy</span></td>
           </tr>
           <tr style="border-bottom:1px solid #f0ebe3;">
-            <td style="padding:8px 10px;">Email</td>
-            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">em-{campaign}-d{day}-{cta}</td>
-            <td style="padding:8px 10px;"><span class="challenge-pill freq">em-welcome-d1-hub</span></td>
+            <td style="padding:8px 10px;">Email nurture</td>
+            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">em-nurture-e{#}-{cta}</td>
+            <td style="padding:8px 10px;"><span class="challenge-pill freq">em-nurture-e3-story</span></td>
+          </tr>
+          <tr style="border-bottom:1px solid #f0ebe3;">
+            <td style="padding:8px 10px;">Email nurture offer</td>
+            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">em-nurture-offer-{cta}</td>
+            <td style="padding:8px 10px;"><span class="challenge-pill freq">em-nurture-offer-buy</span></td>
           </tr>
           <tr>
-            <td style="padding:8px 10px;">Non-funnel</td>
-            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">{platform}-{placement}-{date?}</td>
-            <td style="padding:8px 10px;"><span class="challenge-pill freq">ig-story-apr20</span></td>
+            <td style="padding:8px 10px;">Email beta</td>
+            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">em-beta-e{#}-{cta}</td>
+            <td style="padding:8px 10px;"><span class="challenge-pill freq">em-beta-e1-join</span></td>
           </tr>
         </tbody>
       </table>
