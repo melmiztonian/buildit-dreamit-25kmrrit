@@ -1932,7 +1932,7 @@ body {
   <!-- Link Tracker -->
   <div class="card" data-card-id="links" data-card-label="Link Tracker">
     <div class="card-title" data-editable="title_links">Link Tracker</div>
-    <div class="card-subtitle">Create trackable links. Share them anywhere. See every click.</div>
+    <div class="card-subtitle" data-editable="subtitle_links">Create trackable links. Share them anywhere. See every click.</div>
     <div id="link-tracker"></div>
   </div>
 
@@ -3947,6 +3947,83 @@ async function renderLinkTracker() {
   const allClicks = _cachedClicks;
   const uniqueCounts = computeUniqueCounts(allClicks);
   container.innerHTML = '';
+
+  // Naming guide pill + panel
+  const guideWrap = document.createElement('div');
+  guideWrap.style.cssText = 'text-align:right;margin-bottom:10px;';
+  const guideBtn = document.createElement('button');
+  guideBtn.className = 'mini-nav-pill';
+  guideBtn.textContent = linkStatsOpen._namingGuide ? 'Hide naming guide' : 'Link naming guide';
+  guideBtn.addEventListener('click', () => { linkStatsOpen._namingGuide = !linkStatsOpen._namingGuide; renderLinkTracker(); });
+  guideWrap.appendChild(guideBtn);
+  container.appendChild(guideWrap);
+
+  if (linkStatsOpen._namingGuide) {
+    const guide = document.createElement('div');
+    guide.className = 'card';
+    guide.style.cssText = 'margin-bottom:16px;padding:20px;';
+    const savedGuide = LS.get('link_naming_guide', null);
+    if (savedGuide) { guide.innerHTML = savedGuide; } else {
+    guide.innerHTML = `
+      <div style="font-weight:700;font-size:1rem;margin-bottom:12px;">Link Naming Format Guide</div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+        <thead>
+          <tr style="text-align:left;border-bottom:2px solid var(--border);">
+            <th style="padding:6px 10px;color:var(--muted);font-weight:600;">Stage</th>
+            <th style="padding:6px 10px;color:var(--muted);font-weight:600;">Format</th>
+            <th style="padding:6px 10px;color:var(--muted);font-weight:600;">Example</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #f0ebe3;">
+            <td style="padding:8px 10px;">DM link</td>
+            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">dm-{cta-word}-{version}</td>
+            <td style="padding:8px 10px;"><span class="challenge-pill freq">dm-connect-v1</span></td>
+          </tr>
+          <tr style="border-bottom:1px solid #f0ebe3;">
+            <td style="padding:8px 10px;">Landing page</td>
+            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">{page}-{section}-{cta}</td>
+            <td style="padding:8px 10px;"><span class="challenge-pill freq">cp-hero-download</span></td>
+          </tr>
+          <tr style="border-bottom:1px solid #f0ebe3;">
+            <td style="padding:8px 10px;">Tripwire page</td>
+            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">tw-{section}-{cta}</td>
+            <td style="padding:8px 10px;"><span class="challenge-pill freq">tw-hero-buy</span></td>
+          </tr>
+          <tr style="border-bottom:1px solid #f0ebe3;">
+            <td style="padding:8px 10px;">Email</td>
+            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">em-{campaign}-d{day}-{cta}</td>
+            <td style="padding:8px 10px;"><span class="challenge-pill freq">em-welcome-d1-hub</span></td>
+          </tr>
+          <tr>
+            <td style="padding:8px 10px;">Non-funnel</td>
+            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">{platform}-{placement}-{date?}</td>
+            <td style="padding:8px 10px;"><span class="challenge-pill freq">ig-story-apr20</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:0.72rem;color:var(--muted);font-weight:600;">Page shortcodes:</span>
+        <span class="challenge-pill score">cp</span>
+        <span class="challenge-pill score">beta</span>
+        <span class="challenge-pill score">hub</span>
+        <span class="challenge-pill score">tw</span>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:0.72rem;color:var(--muted);font-weight:600;">Section shortcodes:</span>
+        <span class="challenge-pill done">hero</span>
+        <span class="challenge-pill done">mid</span>
+        <span class="challenge-pill done">footer</span>
+        <span class="challenge-pill done">faq</span>
+        <span class="challenge-pill done">exit</span>
+      </div>
+    `;
+    }
+    guide.setAttribute('contenteditable', 'true');
+    guide.setAttribute('spellcheck', 'false');
+    guide.addEventListener('blur', () => { LS.set('link_naming_guide', guide.innerHTML); });
+    container.appendChild(guide);
+  }
 
   for (const link of links) {
     const item = document.createElement('div');
