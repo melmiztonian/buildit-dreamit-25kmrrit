@@ -3985,6 +3985,13 @@ async function renderLinkTracker() {
         setTimeout(() => { copyBtn.textContent = 'Copy Link'; }, 1500);
       });
     });
+    const embedBtn = document.createElement('button');
+    embedBtn.className = 'habit-action-pill';
+    embedBtn.textContent = 'Embed Code';
+    embedBtn.addEventListener('click', () => {
+      linkStatsOpen[link.name + '_embed'] = !linkStatsOpen[link.name + '_embed'];
+      renderLinkTracker();
+    });
     const statsBtn = document.createElement('button');
     statsBtn.className = 'habit-action-pill' + (linkStatsOpen[link.name] ? ' active' : '');
     statsBtn.textContent = linkStatsOpen[link.name] ? 'Hide Stats' : 'Stats';
@@ -3997,9 +4004,39 @@ async function renderLinkTracker() {
     delBtn.textContent = 'Delete';
     delBtn.addEventListener('click', () => deleteLink(link.name));
     actions.appendChild(copyBtn);
+    actions.appendChild(embedBtn);
     actions.appendChild(statsBtn);
     actions.appendChild(delBtn);
     item.appendChild(actions);
+
+    // Embed code panel
+    if (linkStatsOpen[link.name + '_embed']) {
+      const embedPanel = document.createElement('div');
+      embedPanel.style.cssText = 'margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;';
+      const embedCode = '<script>\nfunction trackClick(n){var v=localStorage.getItem("_vid");if(!v){v="v_"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem("_vid",v)}fetch("' + SB_URL + '/rest/v1/link_clicks",{method:"POST",headers:{"apikey":"' + SB_KEY + '","Authorization":"Bearer ' + SB_KEY + '","Content-Type":"application/json"},body:JSON.stringify({link_name:n,visitor_id:v,referrer:document.referrer||null,user_agent:navigator.userAgent||null})}).catch(function(){})}\n<\/script>';
+      const btnCode = '<button onclick="trackClick(\'' + link.name + '\')">Your CTA text</button>';
+      const linkCode = '<a href="YOUR_URL" onclick="trackClick(\'' + link.name + '\')">Your link text</a>';
+      embedPanel.innerHTML = `
+        <div style="font-size:0.78rem;font-weight:600;color:var(--text);margin-bottom:8px;">Embed tracking on any page</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;">1. Add this script once to your page:</div>
+        <textarea style="width:100%;height:60px;font-family:monospace;font-size:0.68rem;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--bg);color:var(--text);resize:vertical;" readonly>${embedCode}</textarea>
+        <div style="font-size:0.72rem;color:var(--muted);margin:8px 0 6px;">2. Add to your button or link:</div>
+        <textarea style="width:100%;height:30px;font-family:monospace;font-size:0.68rem;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--bg);color:var(--text);resize:none;" readonly>${btnCode}</textarea>
+        <textarea style="width:100%;height:30px;font-family:monospace;font-size:0.68rem;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--bg);color:var(--text);resize:none;margin-top:4px;" readonly>${linkCode}</textarea>
+      `;
+      const copyEmbed = document.createElement('button');
+      copyEmbed.className = 'habit-action-pill';
+      copyEmbed.style.marginTop = '8px';
+      copyEmbed.textContent = 'Copy all';
+      copyEmbed.addEventListener('click', () => {
+        navigator.clipboard.writeText(embedCode + '\n\n' + btnCode).then(() => {
+          copyEmbed.textContent = 'Copied!';
+          setTimeout(() => { copyEmbed.textContent = 'Copy all'; }, 1500);
+        });
+      });
+      embedPanel.appendChild(copyEmbed);
+      item.appendChild(embedPanel);
+    }
 
     // Stats panel
     if (linkStatsOpen[link.name]) {
