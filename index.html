@@ -4113,8 +4113,8 @@ async function renderLinkTracker() {
     const urlDiv = document.createElement('div');
     urlDiv.style.cssText = 'margin-bottom:6px;';
     let urlHtml = `<div class="link-url">${trackUrl}</div><div class="link-dest">\u2192 ${link.destination}</div>`;
-    if (meta.shopify_link) urlHtml += `<div class="link-dest" style="color:var(--sage);">\uD83D\uDED2 ${meta.shopify_link}</div>`;
-    if (meta.video_urls) urlHtml += `<div class="link-dest" style="color:var(--terracotta);">\uD83C\uDFA5 ${meta.video_urls}</div>`;
+    if (meta.shopify_link) urlHtml += `<div class="link-dest" style="color:var(--sage);">Shopify link: ${meta.shopify_link}</div>`;
+    if (meta.video_urls) urlHtml += `<div class="link-dest" style="color:var(--terracotta);">Video: ${meta.video_urls}</div>`;
     urlDiv.innerHTML = urlHtml;
     item.appendChild(urlDiv);
 
