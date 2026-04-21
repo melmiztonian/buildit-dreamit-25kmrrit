@@ -4371,6 +4371,8 @@ async function renderLinkTracker() {
       const ep = document.createElement('div');
       ep.style.cssText = 'margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;';
       ep.innerHTML = `
+        <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Destination URL</label>
+        <input type="text" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;" value="${(link.destination || '').replace(/"/g, '&quot;')}" data-f="destination">
         <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Destination path (for DM links)</label>
         <select style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;" data-f="dm_path">
           <option value="">None</option>
@@ -4391,12 +4393,22 @@ async function renderLinkTracker() {
       saveBtn.textContent = 'Save';
       saveBtn.addEventListener('click', () => {
         const m = LS.get('link_meta_' + link.name, {});
+        // Update destination URL in Supabase
+        const newDest = ep.querySelector('[data-f="destination"]').value.trim();
+        if (newDest && newDest !== link.destination) {
+          fetch(SB_URL + '/rest/v1/links?name=eq.' + encodeURIComponent(link.name), {
+            method: 'PATCH',
+            headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ destination: newDest })
+          }).catch(() => {});
+        }
         m.dm_path = ep.querySelector('[data-f="dm_path"]').value;
         m.video_urls = ep.querySelector('[data-f="video_urls"]').value.trim();
         m.shopify_link = ep.querySelector('[data-f="shopify_link"]').value.trim();
         m.notes = ep.querySelector('textarea').value.trim();
         LS.set('link_meta_' + link.name, m);
         linkStatsOpen[link.name + '_edit'] = false;
+        _cachedLinks = null;
         renderLinkTracker();
       });
       ep.appendChild(saveBtn);
