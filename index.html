@@ -4560,9 +4560,21 @@ async function renderLinkTracker() {
   container.appendChild(addBtn);
 
   if (linkAddOpen) {
-    const stageOpts = '<option value="dm-link">DM Link</option>' + FUNNEL_STAGES.filter(s => !s.manual && !s.id.startsWith('dm-link-')).map(s =>
-      `<option value="${s.id}">${s.label}</option>`
-    ).join('');
+    const lanesData = LS.get('funnel_lanes', [
+      { label: 'CP', stages: ['dm-link-cp', 'cp-page', 'cp-optin', 'tw-page', 'em-nurture', 'em-nurture-offer'] },
+      { label: 'Beta', stages: ['dm-link-beta', 'beta-page', 'em-beta'] },
+      { label: 'Hub', stages: ['dm-link-hub', 'hub-page'] },
+    ]);
+    let stageOpts = '';
+    lanesData.forEach(lane => {
+      stageOpts += `<optgroup label="${lane.label} path">`;
+      lane.stages.forEach(stageId => {
+        const stage = FUNNEL_STAGES.find(s => s.id === stageId);
+        const label = stage ? (LS.get('funnel_label_' + stageId, null) || stage.label) : stageId;
+        stageOpts += `<option value="${stageId}">${label}</option>`;
+      });
+      stageOpts += '</optgroup>';
+    });
     const form = document.createElement('div');
     form.className = 'link-add-form open';
     form.innerHTML = `
