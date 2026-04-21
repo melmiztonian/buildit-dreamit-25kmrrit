@@ -4094,7 +4094,23 @@ async function renderFunnel() {
       }
 
       const stage = FUNNEL_STAGES.find(s => s.id === stageId) || { id: stageId, label: stageId, color: '#C4CDB8' };
-      row.appendChild(buildCol(stage));
+      const col = buildCol(stage);
+      if (editingFunnel) {
+        const delStage = document.createElement('button');
+        delStage.style.cssText = 'display:block;width:100%;border:none;background:transparent;color:var(--sand);font-size:0.65rem;cursor:pointer;padding:2px 0;text-align:center;';
+        delStage.textContent = 'remove';
+        delStage.addEventListener('click', () => {
+          const ld = LS.get('funnel_lanes', DEFAULT_LANES);
+          ld[li].stages.splice(i, 1);
+          if (ld[li].stages.length === 0) ld.splice(li, 1);
+          LS.set('funnel_lanes', ld);
+          renderFunnel();
+        });
+        delStage.addEventListener('mouseenter', () => { delStage.style.color = '#c0392b'; });
+        delStage.addEventListener('mouseleave', () => { delStage.style.color = 'var(--sand)'; });
+        col.appendChild(delStage);
+      }
+      row.appendChild(col);
     });
 
     // Lane actions (edit mode)
