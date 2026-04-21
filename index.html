@@ -4059,6 +4059,15 @@ async function renderFunnel() {
       renderFunnel();
     });
     editBar.appendChild(addLaneBtn);
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'habit-action-pill danger';
+    resetBtn.textContent = 'Reset to default';
+    resetBtn.addEventListener('click', () => {
+      if (!confirm('Reset funnel to default layout? This cannot be undone.')) return;
+      LS.set('funnel_lanes', DEFAULT_LANES);
+      renderFunnel();
+    });
+    editBar.appendChild(resetBtn);
   }
   container.appendChild(editBar);
 
