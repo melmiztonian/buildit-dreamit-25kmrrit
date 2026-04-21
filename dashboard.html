@@ -1377,6 +1377,31 @@ body {
   text-align: center;
   padding: 10px 0;
 }
+.funnel-edit-bar {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+.funnel-lane-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+  padding-top: 6px;
+}
+.funnel-lane-actions button {
+  border: none;
+  background: transparent;
+  color: var(--sand);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+.funnel-lane-actions button:hover { color: var(--terracotta); }
+.funnel-lane-actions button.danger:hover { color: #c0392b; }
 
 /* ======== LINK TRACKER ======== */
 .link-item {
@@ -3999,52 +4024,131 @@ async function renderFunnel() {
   }
 
   // Horizontal lanes — each path is its own row
-  const LANES = [
+  const DEFAULT_LANES = [
     { label: 'CP', stages: ['dm-link-cp', 'cp-page', 'cp-optin', 'tw-page', 'em-nurture', 'em-nurture-offer'] },
     { label: 'Beta', stages: ['dm-link-beta', 'beta-page', 'em-beta'] },
     { label: 'Hub', stages: ['dm-link-hub', 'hub-page'] },
   ];
+  const lanesData = LS.get('funnel_lanes', DEFAULT_LANES);
+  const editingFunnel = linkStatsOpen._editFunnel || false;
 
-  const lanes = document.createElement('div');
-  lanes.className = 'funnel-lanes';
+  // Edit toggle
+  const editBar = document.createElement('div');
+  editBar.className = 'funnel-edit-bar';
+  const editBtn = document.createElement('button');
+  editBtn.className = 'habit-action-pill' + (editingFunnel ? ' active' : '');
+  editBtn.textContent = editingFunnel ? 'Done editing' : 'Edit funnel';
+  editBtn.addEventListener('click', () => {
+    linkStatsOpen._editFunnel = !linkStatsOpen._editFunnel;
+    renderFunnel();
+  });
+  editBar.appendChild(editBtn);
+  if (editingFunnel) {
+    const addLaneBtn = document.createElement('button');
+    addLaneBtn.className = 'habit-action-pill';
+    addLaneBtn.textContent = '+ Add path';
+    addLaneBtn.addEventListener('click', () => {
+      const ld = LS.get('funnel_lanes', DEFAULT_LANES);
+      const id = 'path-' + Date.now().toString(36);
+      ld.push({ label: 'New', stages: [id] });
+      // Register the new stage
+      if (!FUNNEL_STAGES.find(s => s.id === id)) {
+        FUNNEL_STAGES.push({ id, label: 'New Stage', color: '#C4CDB8' });
+      }
+      LS.set('funnel_lanes', ld);
+      renderFunnel();
+    });
+    editBar.appendChild(addLaneBtn);
+  }
+  container.appendChild(editBar);
 
-  LANES.forEach(lane => {
+  const lanesEl = document.createElement('div');
+  lanesEl.className = 'funnel-lanes';
+
+  lanesData.forEach((lane, li) => {
     const row = document.createElement('div');
     row.className = 'funnel-lane';
 
+    // Editable lane label
     const label = document.createElement('div');
     label.className = 'funnel-lane-label';
     label.textContent = lane.label;
+    if (editingFunnel) {
+      label.setAttribute('contenteditable', 'true');
+      label.style.outline = 'none';
+      label.style.cursor = 'text';
+      label.addEventListener('blur', () => {
+        const ld = LS.get('funnel_lanes', DEFAULT_LANES);
+        ld[li].label = label.textContent.trim();
+        LS.set('funnel_lanes', ld);
+      });
+    }
     row.appendChild(label);
 
     lane.stages.forEach((stageId, i) => {
       if (i > 0) {
         const arrow = document.createElement('div');
         arrow.className = 'funnel-conv-arrow';
-        if (stageId) {
-          arrow.textContent = '\u25B6';
-        }
+        arrow.textContent = '\u25B6';
         row.appendChild(arrow);
       }
 
-      if (!stageId) {
-        // Empty placeholder to keep alignment
-        const spacer = document.createElement('div');
-        spacer.className = 'funnel-col';
-        spacer.style.visibility = 'hidden';
-        row.appendChild(spacer);
-      } else {
-        const stage = FUNNEL_STAGES.find(s => s.id === stageId);
-        if (stage) {
-          row.appendChild(buildCol(stage));
-        }
-      }
+      const stage = FUNNEL_STAGES.find(s => s.id === stageId) || { id: stageId, label: stageId, color: '#C4CDB8' };
+      row.appendChild(buildCol(stage));
     });
 
-    lanes.appendChild(row);
+    // Lane actions (edit mode)
+    if (editingFunnel) {
+      const laneActions = document.createElement('div');
+      laneActions.className = 'funnel-lane-actions';
+      // Add stage to this lane
+      const addStageBtn = document.createElement('button');
+      addStageBtn.textContent = '+';
+      addStageBtn.title = 'Add stage';
+      addStageBtn.addEventListener('click', () => {
+        const ld = LS.get('funnel_lanes', DEFAULT_LANES);
+        const newId = 'stage-' + Date.now().toString(36);
+        ld[li].stages.push(newId);
+        if (!FUNNEL_STAGES.find(s => s.id === newId)) {
+          FUNNEL_STAGES.push({ id: newId, label: 'New Stage', color: '#C4CDB8' });
+        }
+        LS.set('funnel_lanes', ld);
+        renderFunnel();
+      });
+      // Remove last stage from this lane
+      const removeStageBtn = document.createElement('button');
+      removeStageBtn.textContent = '\u2212';
+      removeStageBtn.title = 'Remove last stage';
+      removeStageBtn.addEventListener('click', () => {
+        const ld = LS.get('funnel_lanes', DEFAULT_LANES);
+        if (ld[li].stages.length > 1) {
+          ld[li].stages.pop();
+          LS.set('funnel_lanes', ld);
+          renderFunnel();
+        }
+      });
+      // Delete lane
+      const delLaneBtn = document.createElement('button');
+      delLaneBtn.className = 'danger';
+      delLaneBtn.textContent = '\u00D7';
+      delLaneBtn.title = 'Delete path';
+      delLaneBtn.addEventListener('click', () => {
+        if (!confirm('Delete this path?')) return;
+        const ld = LS.get('funnel_lanes', DEFAULT_LANES);
+        ld.splice(li, 1);
+        LS.set('funnel_lanes', ld);
+        renderFunnel();
+      });
+      laneActions.appendChild(addStageBtn);
+      laneActions.appendChild(removeStageBtn);
+      laneActions.appendChild(delLaneBtn);
+      row.appendChild(laneActions);
+    }
+
+    lanesEl.appendChild(row);
   });
 
-  container.appendChild(lanes);
+  container.appendChild(lanesEl);
 }
 
 async function renderLinkTracker() {
