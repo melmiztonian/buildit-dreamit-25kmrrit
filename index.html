@@ -1271,29 +1271,36 @@ body {
 }
 .sharon-tpl-text:focus { border-color: var(--terracotta); }
 
-/* ======== FUNNEL (horizontal pipeline with branches) ======== */
-.funnel-pipeline {
-  display: flex;
-  gap: 10px;
+/* ======== FUNNEL (horizontal lanes) ======== */
+.funnel-lanes {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 8px;
   scrollbar-width: thin;
   scrollbar-color: var(--sand) transparent;
-  align-items: flex-start;
 }
-.funnel-pipeline::-webkit-scrollbar { height: 6px; }
-.funnel-pipeline::-webkit-scrollbar-track { background: transparent; }
-.funnel-pipeline::-webkit-scrollbar-thumb { background: var(--sand); border-radius: 3px; }
-.funnel-row-group {
+.funnel-lanes::-webkit-scrollbar { height: 6px; }
+.funnel-lanes::-webkit-scrollbar-track { background: transparent; }
+.funnel-lanes::-webkit-scrollbar-thumb { background: var(--sand); border-radius: 3px; }
+.funnel-lane {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.funnel-lane-label {
+  min-width: 60px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding-top: 10px;
   flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 .funnel-col {
-  min-width: 170px;
-  max-width: 210px;
+  min-width: 160px;
+  max-width: 200px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -3987,32 +3994,54 @@ async function renderFunnel() {
     return col;
   }
 
-  // Horizontal pipeline with branching rows
-  const pipeline = document.createElement('div');
-  pipeline.className = 'funnel-pipeline';
+  // Horizontal lanes — each path is its own row
+  const LANES = [
+    { label: 'CP', stages: ['dm-link-cp', 'cp-page', 'cp-optin', 'tw-page'] },
+    { label: '', stages: [null, null, null, 'em-nurture', 'em-nurture-offer'] },
+    { label: 'Beta', stages: ['dm-link-beta', 'beta-page', 'em-beta'] },
+    { label: 'Hub', stages: ['dm-link-hub', 'hub-page'] },
+  ];
 
-  FUNNEL_ROWS.forEach((row, ri) => {
-    // Arrow between row groups
-    if (ri > 0) {
-      const arrow = document.createElement('div');
-      arrow.className = 'funnel-conv-arrow';
-      arrow.textContent = '\u25B6';
-      pipeline.appendChild(arrow);
-    }
+  const lanes = document.createElement('div');
+  lanes.className = 'funnel-lanes';
 
-    if (row.length === 1) {
-      // Single column
-      pipeline.appendChild(buildCol(row[0]));
-    } else {
-      // Multiple parallel paths — stack vertically
-      const group = document.createElement('div');
-      group.className = 'funnel-row-group';
-      row.forEach(stage => group.appendChild(buildCol(stage)));
-      pipeline.appendChild(group);
-    }
+  LANES.forEach(lane => {
+    const row = document.createElement('div');
+    row.className = 'funnel-lane';
+
+    const label = document.createElement('div');
+    label.className = 'funnel-lane-label';
+    label.textContent = lane.label;
+    row.appendChild(label);
+
+    lane.stages.forEach((stageId, i) => {
+      if (i > 0) {
+        const arrow = document.createElement('div');
+        arrow.className = 'funnel-conv-arrow';
+        if (stageId) {
+          arrow.textContent = '\u25B6';
+        }
+        row.appendChild(arrow);
+      }
+
+      if (!stageId) {
+        // Empty placeholder to keep alignment
+        const spacer = document.createElement('div');
+        spacer.className = 'funnel-col';
+        spacer.style.visibility = 'hidden';
+        row.appendChild(spacer);
+      } else {
+        const stage = FUNNEL_STAGES.find(s => s.id === stageId);
+        if (stage) {
+          row.appendChild(buildCol(stage));
+        }
+      }
+    });
+
+    lanes.appendChild(row);
   });
 
-  container.appendChild(pipeline);
+  container.appendChild(lanes);
 }
 
 async function renderLinkTracker() {
