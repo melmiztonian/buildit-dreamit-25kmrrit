@@ -1287,6 +1287,8 @@ body {
   gap: 8px;
   align-items: flex-start;
   margin-bottom: 10px;
+  flex-wrap: nowrap;
+  min-width: max-content;
 }
 .funnel-lane-label {
   min-width: 60px;
@@ -3801,11 +3803,11 @@ const FUNNEL_ROWS = [
   // CP splits into tripwire OR nurture
   [
     { id: 'tw-page', label: 'Tripwire ($19)', color: '#C9896A' },
-    { id: 'em-nurture', label: 'Nurture Emails', color: '#C47A5A' },
+    { id: 'em-nurture', label: '7-Day Email Sequence', color: '#C47A5A' },
   ],
   // Nurture offer
   [
-    { id: 'em-nurture-offer', label: 'Nurture Offer ($19)', color: '#A85D3E' },
+    { id: 'em-nurture-offer', label: '7-Day Email Sequence Offer ($19)', color: '#A85D3E' },
   ],
 ];
 
@@ -3996,8 +3998,7 @@ async function renderFunnel() {
 
   // Horizontal lanes — each path is its own row
   const LANES = [
-    { label: 'CP', stages: ['dm-link-cp', 'cp-page', 'cp-optin', 'tw-page'] },
-    { label: '', stages: [null, null, null, 'em-nurture', 'em-nurture-offer'] },
+    { label: 'CP', stages: ['dm-link-cp', 'cp-page', 'cp-optin', 'tw-page', 'em-nurture', 'em-nurture-offer'] },
     { label: 'Beta', stages: ['dm-link-beta', 'beta-page', 'em-beta'] },
     { label: 'Hub', stages: ['dm-link-hub', 'hub-page'] },
   ];
