@@ -4140,18 +4140,6 @@ async function renderFunnel() {
         LS.set('funnel_lanes', ld);
         renderFunnel();
       });
-      // Remove last stage from this lane
-      const removeStageBtn = document.createElement('button');
-      removeStageBtn.textContent = '\u2212';
-      removeStageBtn.title = 'Remove last stage';
-      removeStageBtn.addEventListener('click', () => {
-        const ld = LS.get('funnel_lanes', DEFAULT_LANES);
-        if (ld[li].stages.length > 1) {
-          ld[li].stages.pop();
-          LS.set('funnel_lanes', ld);
-          renderFunnel();
-        }
-      });
       // Delete lane
       const delLaneBtn = document.createElement('button');
       delLaneBtn.className = 'danger';
@@ -4165,7 +4153,6 @@ async function renderFunnel() {
         renderFunnel();
       });
       laneActions.appendChild(addStageBtn);
-      laneActions.appendChild(removeStageBtn);
       laneActions.appendChild(delLaneBtn);
       row.appendChild(laneActions);
     }
