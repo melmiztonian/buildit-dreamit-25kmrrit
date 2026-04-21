@@ -4017,7 +4017,7 @@ async function renderLinkTracker() {
     const guide = document.createElement('div');
     guide.className = 'card';
     guide.style.cssText = 'margin-bottom:16px;padding:20px;';
-    const savedGuide = LS.get('link_naming_guide', null);
+    const savedGuide = LS.get('link_naming_guide_v2', null);
     if (savedGuide) { guide.innerHTML = savedGuide; } else {
     guide.innerHTML = `
       <div style="font-weight:700;font-size:1rem;margin-bottom:12px;">Full Link Naming Format Guide</div>
@@ -4030,11 +4030,6 @@ async function renderLinkTracker() {
           </tr>
         </thead>
         <tbody>
-          <tr style="border-bottom:1px solid #f0ebe3;">
-            <td style="padding:8px 10px;">IG link</td>
-            <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">ig-{placement}-{date?}</td>
-            <td style="padding:8px 10px;"><span class="challenge-pill freq">ig-bio</span> <span class="challenge-pill freq">ig-story-apr20</span></td>
-          </tr>
           <tr style="border-bottom:1px solid #f0ebe3;">
             <td style="padding:8px 10px;">DM link</td>
             <td style="padding:8px 10px;font-family:monospace;font-size:0.72rem;color:var(--terracotta);">dm-{cta-word}-{version}</td>
@@ -4077,26 +4072,11 @@ async function renderLinkTracker() {
           </tr>
         </tbody>
       </table>
-      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <span style="font-size:0.72rem;color:var(--muted);font-weight:600;">Page shortcodes:</span>
-        <span class="challenge-pill score">cp</span>
-        <span class="challenge-pill score">beta</span>
-        <span class="challenge-pill score">hub</span>
-        <span class="challenge-pill score">tw</span>
-      </div>
-      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <span style="font-size:0.72rem;color:var(--muted);font-weight:600;">Section shortcodes:</span>
-        <span class="challenge-pill done">hero</span>
-        <span class="challenge-pill done">mid</span>
-        <span class="challenge-pill done">footer</span>
-        <span class="challenge-pill done">faq</span>
-        <span class="challenge-pill done">exit</span>
-      </div>
     `;
     }
     guide.setAttribute('contenteditable', 'true');
     guide.setAttribute('spellcheck', 'false');
-    guide.addEventListener('blur', () => { LS.set('link_naming_guide', guide.innerHTML); });
+    guide.addEventListener('blur', () => { LS.set('link_naming_guide_v2', guide.innerHTML); });
     container.appendChild(guide);
   }
 
