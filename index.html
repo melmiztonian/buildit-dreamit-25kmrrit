@@ -4322,6 +4322,26 @@ async function renderLinkTracker() {
     urlDiv.innerHTML = urlHtml;
     item.appendChild(urlDiv);
 
+    // Copy buttons row
+    const copyRow = document.createElement('div');
+    copyRow.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;';
+    const mkCopyBtn = (label, text) => {
+      const b = document.createElement('button');
+      b.className = 'habit-action-pill';
+      b.style.fontSize = '0.68rem';
+      b.textContent = label;
+      b.addEventListener('click', () => {
+        navigator.clipboard.writeText(text).then(() => {
+          b.textContent = 'Copied!';
+          setTimeout(() => { b.textContent = label; }, 1500);
+        });
+      });
+      return b;
+    };
+    copyRow.appendChild(mkCopyBtn('Copy tracking link', trackUrl));
+    if (meta.shopify_link) copyRow.appendChild(mkCopyBtn('Copy Shopify link', meta.shopify_link));
+    item.appendChild(copyRow);
+
     // Actions row 1
     const actions = document.createElement('div');
     actions.className = 'link-actions';
@@ -4370,9 +4390,20 @@ async function renderLinkTracker() {
     if (linkStatsOpen[link.name + '_edit']) {
       const ep = document.createElement('div');
       ep.style.cssText = 'margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;';
+      const destPages = [
+        { val: 'https://hellomelmo.com/connection', label: 'Connection Pack (/connection)' },
+        { val: 'https://hellomelmo.com/beta', label: 'Beta List (/beta)' },
+        { val: 'https://hellomelmo.com/hub', label: 'Hub Sales Page (/hub)' },
+      ];
+      const destOpts = destPages.map(p => `<option value="${p.val}" ${link.destination === p.val ? 'selected' : ''}>${p.label}</option>`).join('');
+      const isCustomDest = !destPages.find(p => p.val === link.destination);
       ep.innerHTML = `
         <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Destination URL</label>
-        <input type="text" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;" value="${(link.destination || '').replace(/"/g, '&quot;')}" data-f="destination">
+        <select style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:4px;" data-f="destination">
+          ${destOpts}
+          <option value="_custom" ${isCustomDest ? 'selected' : ''}>Custom URL...</option>
+        </select>
+        <input type="text" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;${isCustomDest ? '' : 'display:none;'}" value="${isCustomDest ? (link.destination || '').replace(/"/g, '&quot;') : ''}" data-f="destination_custom" placeholder="https://...">
         <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Destination path (for DM links)</label>
         <select style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;" data-f="dm_path">
           <option value="">None</option>
@@ -4380,13 +4411,23 @@ async function renderLinkTracker() {
           <option value="beta" ${meta.dm_path === 'beta' ? 'selected' : ''}>Beta List</option>
           <option value="hub" ${meta.dm_path === 'hub' ? 'selected' : ''}>Hub Direct</option>
         </select>
+        <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">CTA word (auto-generates Shopify link)</label>
+        <input type="text" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:4px;" value="${(meta.cta_word || '').replace(/"/g, '&quot;')}" data-f="cta_word" placeholder="e.g. connect">
+        <div style="font-size:0.72rem;color:var(--sage);margin-bottom:8px;" data-f="shopify_preview">Shopify link: ${meta.cta_word ? 'hellomelmo.com/' + meta.cta_word : '(enter CTA word above)'}</div>
         <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Video URLs (IG reels, comma-separated)</label>
         <input type="text" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;" value="${(meta.video_urls || '').replace(/"/g, '&quot;')}" data-f="video_urls">
-        <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Shopify shortened link (the link you actually send)</label>
-        <input type="text" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;" value="${(meta.shopify_link || '').replace(/"/g, '&quot;')}" data-f="shopify_link">
         <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Notes</label>
         <textarea style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;resize:vertical;min-height:40px;">${(meta.notes || '')}</textarea>
       `;
+      // Show/hide custom URL input
+      ep.querySelector('[data-f="destination"]').addEventListener('change', (e) => {
+        ep.querySelector('[data-f="destination_custom"]').style.display = e.target.value === '_custom' ? '' : 'none';
+      });
+      // Auto-generate shopify link preview
+      ep.querySelector('[data-f="cta_word"]').addEventListener('input', (e) => {
+        const w = e.target.value.trim().toLowerCase();
+        ep.querySelector('[data-f="shopify_preview"]').textContent = 'Shopify link: ' + (w ? 'hellomelmo.com/' + w : '(enter CTA word above)');
+      });
       const saveBtn = document.createElement('button');
       saveBtn.className = 'habit-action-pill';
       saveBtn.style.marginTop = '8px';
@@ -4394,7 +4435,8 @@ async function renderLinkTracker() {
       saveBtn.addEventListener('click', () => {
         const m = LS.get('link_meta_' + link.name, {});
         // Update destination URL in Supabase
-        const newDest = ep.querySelector('[data-f="destination"]').value.trim();
+        const destSel = ep.querySelector('[data-f="destination"]').value;
+        const newDest = destSel === '_custom' ? ep.querySelector('[data-f="destination_custom"]').value.trim() : destSel;
         if (newDest && newDest !== link.destination) {
           fetch(SB_URL + '/rest/v1/links?name=eq.' + encodeURIComponent(link.name), {
             method: 'PATCH',
@@ -4403,8 +4445,10 @@ async function renderLinkTracker() {
           }).catch(() => {});
         }
         m.dm_path = ep.querySelector('[data-f="dm_path"]').value;
+        const ctaWord = ep.querySelector('[data-f="cta_word"]').value.trim().toLowerCase();
+        m.cta_word = ctaWord;
+        m.shopify_link = ctaWord ? 'https://hellomelmo.com/' + ctaWord : '';
         m.video_urls = ep.querySelector('[data-f="video_urls"]').value.trim();
-        m.shopify_link = ep.querySelector('[data-f="shopify_link"]').value.trim();
         m.notes = ep.querySelector('textarea').value.trim();
         LS.set('link_meta_' + link.name, m);
         linkStatsOpen[link.name + '_edit'] = false;
@@ -4591,10 +4635,21 @@ async function renderLinkTracker() {
     form.className = 'link-add-form open';
     form.innerHTML = `
       <input type="text" id="link-new-name" placeholder="Link name (e.g. dm-connect-v1)">
-      <input type="text" id="link-new-dest" placeholder="Destination URL (e.g. https://hellomelmo.com/...)">
+      <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Destination page</label>
+      <select id="link-new-dest" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:4px;">
+        <option value="https://hellomelmo.com/connection">Connection Pack (/connection)</option>
+        <option value="https://hellomelmo.com/beta">Beta List (/beta)</option>
+        <option value="https://hellomelmo.com/hub">Hub Sales Page (/hub)</option>
+        <option value="_custom">Custom URL...</option>
+      </select>
+      <input type="text" id="link-new-dest-custom" placeholder="https://..." style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:8px;display:none;">
+      <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Funnel stage</label>
       <select id="link-new-stage" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:8px;">
         ${stageOpts}
       </select>
+      <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">CTA word (auto-generates Shopify link)</label>
+      <input type="text" id="link-new-cta" placeholder="e.g. connect" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:4px;">
+      <div id="link-new-shopify-preview" style="font-size:0.72rem;color:var(--sage);margin-bottom:8px;">Shopify link: (enter CTA word above)</div>
       <select id="link-new-path" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:8px;">
         <option value="">Destination path (for DM links)</option>
         <option value="cp">Connection Pack</option>
@@ -4607,16 +4662,30 @@ async function renderLinkTracker() {
       </div>
     `;
     container.appendChild(form);
+    // Show/hide custom dest input
+    form.querySelector('#link-new-dest').addEventListener('change', (e) => {
+      form.querySelector('#link-new-dest-custom').style.display = e.target.value === '_custom' ? '' : 'none';
+    });
+    // Auto-generate shopify link preview
+    form.querySelector('#link-new-cta').addEventListener('input', (e) => {
+      const w = e.target.value.trim().toLowerCase();
+      form.querySelector('#link-new-shopify-preview').textContent = 'Shopify link: ' + (w ? 'hellomelmo.com/' + w : '(enter CTA word above)');
+    });
     form.querySelector('#link-create-btn').addEventListener('click', async () => {
       const name = form.querySelector('#link-new-name').value.trim().replace(/\s+/g, '-').toLowerCase();
-      const dest = form.querySelector('#link-new-dest').value.trim();
+      const destSel = form.querySelector('#link-new-dest').value;
+      const dest = destSel === '_custom' ? form.querySelector('#link-new-dest-custom').value.trim() : destSel;
       let stage = form.querySelector('#link-new-stage').value;
       const path = form.querySelector('#link-new-path').value;
+      const ctaWord = form.querySelector('#link-new-cta').value.trim().toLowerCase();
       // Auto-route DM links to the right sub-stage
       if (stage === 'dm-link' && path) stage = 'dm-link-' + path;
       if (!name || !dest) return;
       await createLink(name, dest, stage);
-      if (path) { LS.set('link_meta_' + name, { ...LS.get('link_meta_' + name, {}), dm_path: path }); }
+      const meta = { ...LS.get('link_meta_' + name, {}) };
+      if (path) meta.dm_path = path;
+      if (ctaWord) { meta.cta_word = ctaWord; meta.shopify_link = 'https://hellomelmo.com/' + ctaWord; }
+      LS.set('link_meta_' + name, meta);
       linkAddOpen = false;
       _cachedLinks = null; _cachedClicks = null;
       await renderFunnel();
