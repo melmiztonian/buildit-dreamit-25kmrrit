@@ -103,21 +103,18 @@
       var section = getSectionName(btn);
 
       // Build name: prefix-section-buttontext or prefix-buttontext
-      // Same section + same text = same link name (no numbering)
-      var linkName = section ? PREFIX + '-' + section + '-' + text : PREFIX + '-' + text;
+      var baseName = section ? PREFIX + '-' + section + '-' + text : PREFIX + '-' + text;
 
-      // Only number across DIFFERENT sections with the same name
-      if (!section && seen[linkName]) {
-        seen[linkName]++;
-        linkName = linkName + '-' + seen[linkName];
-      } else if (!section) {
-        seen[linkName] = 1;
+      // Number duplicates
+      if (seen[baseName]) {
+        seen[baseName]++;
+        var linkName = baseName + '-' + seen[baseName];
+      } else {
+        seen[baseName] = 1;
+        var linkName = baseName;
       }
 
-      if (!seen[linkName]) {
-        seen[linkName] = true;
-        ensureLink(linkName);
-      }
+      ensureLink(linkName);
 
       btn.addEventListener('click', function() {
         trackClick(linkName);
