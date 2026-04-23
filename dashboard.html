@@ -4562,16 +4562,9 @@ async function renderLinkTracker() {
       linkStatsOpen[link.name] = !linkStatsOpen[link.name];
       renderLinkTracker();
     }));
-    actions.appendChild(mkBtn('Dupe', '', async () => {
-      const newName = prompt('New link name (copy of ' + link.name + '):', link.name + '-copy');
-      if (!newName || !newName.trim()) return;
-      const cleanName = newName.trim().replace(/\s+/g, '-').toLowerCase();
-      await createLink(cleanName, link.destination, link.funnel_stage);
-      const meta = LS.get('link_meta_' + link.name, {});
-      if (Object.keys(meta).length) LS.set('link_meta_' + cleanName, { ...meta });
-      _cachedLinks = null; _cachedClicks = null;
-      await renderFunnel();
-      await renderLinkTracker();
+    actions.appendChild(mkBtn('Dupe', '', () => {
+      linkStatsOpen[link.name + '_dupe'] = !linkStatsOpen[link.name + '_dupe'];
+      renderLinkTracker();
     }));
     actions.appendChild(mkBtn('Del', 'danger', () => deleteLink(link.name)));
     item.appendChild(actions);
@@ -4709,6 +4702,97 @@ async function renderLinkTracker() {
       copyRow.appendChild(copyManual);
       embedPanel.appendChild(copyRow);
       item.appendChild(embedPanel);
+    }
+
+    // Dupe panel
+    if (linkStatsOpen[link.name + '_dupe']) {
+      const dp = document.createElement('div');
+      dp.style.cssText = 'margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;grid-column:1/-1;';
+      const destPages = [
+        { val: 'https://hellomelmo.com/connection', label: 'Connection Pack (/connection)' },
+        { val: 'https://hellomelmo.com/beta', label: 'Beta List (/beta)' },
+        { val: 'https://hellomelmo.com/hub', label: 'Hub Sales Page (/hub)' },
+      ];
+      const destOpts = destPages.map(p => `<option value="${p.val}" ${link.destination === p.val ? 'selected' : ''}>${p.label}</option>`).join('');
+      const isCustomDest = !destPages.find(p => p.val === link.destination);
+      const lanesData3 = LS.get('funnel_lanes', []);
+      let stageOpts3 = '';
+      lanesData3.forEach(lane => {
+        stageOpts3 += '<optgroup label="' + lane.label + ' path">';
+        lane.stages.forEach(sid => {
+          const st = FUNNEL_STAGES.find(s => s.id === sid);
+          const lb = st ? (LS.get('funnel_label_' + sid, null) || st.label) : sid;
+          stageOpts3 += '<option value="' + sid + '"' + (link.funnel_stage === sid ? ' selected' : '') + '>' + lb + '</option>';
+        });
+        stageOpts3 += '</optgroup>';
+      });
+      dp.innerHTML = `
+        <div style="font-size:0.82rem;font-weight:600;color:var(--text);margin-bottom:10px;">Duplicate link</div>
+        <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Link name</label>
+        <input type="text" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;" value="${link.name}-copy" data-f="name">
+        <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Destination</label>
+        <select style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:4px;" data-f="dest">
+          ${destOpts}
+          <option value="_custom" ${isCustomDest ? 'selected' : ''}>Custom URL...</option>
+        </select>
+        <input type="text" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;${isCustomDest ? '' : 'display:none;'}" value="${isCustomDest ? (link.destination || '') : ''}" data-f="dest_custom" placeholder="https://...">
+        <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Funnel stage</label>
+        <select style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;" data-f="stage">
+          ${stageOpts3}
+        </select>
+        <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">CTA word</label>
+        <input type="text" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;" value="${(meta.cta_word || '')}" data-f="cta">
+        <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">DM path</label>
+        <select style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;" data-f="path">
+          <option value="">None</option>
+          <option value="cp" ${meta.dm_path === 'cp' ? 'selected' : ''}>Connection Pack</option>
+          <option value="beta" ${meta.dm_path === 'beta' ? 'selected' : ''}>Beta List</option>
+          <option value="hub" ${meta.dm_path === 'hub' ? 'selected' : ''}>Hub Direct</option>
+        </select>
+        <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Video URLs</label>
+        <input type="text" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;margin-bottom:8px;" value="${(meta.video_urls || '')}" data-f="videos">
+        <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Notes</label>
+        <textarea style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;resize:vertical;min-height:40px;" data-f="notes">${(meta.notes || '')}</textarea>
+      `;
+      dp.querySelector('[data-f="dest"]').addEventListener('change', (e) => {
+        dp.querySelector('[data-f="dest_custom"]').style.display = e.target.value === '_custom' ? '' : 'none';
+      });
+      const dupeActions = document.createElement('div');
+      dupeActions.style.cssText = 'display:flex;gap:6px;margin-top:8px;justify-content:flex-end;';
+      const createDupe = document.createElement('button');
+      createDupe.className = 'habit-action-pill';
+      createDupe.textContent = 'Create';
+      createDupe.addEventListener('click', async () => {
+        const newName = dp.querySelector('[data-f="name"]').value.trim().replace(/\s+/g, '-').toLowerCase();
+        const destSel = dp.querySelector('[data-f="dest"]').value;
+        const dest = destSel === '_custom' ? dp.querySelector('[data-f="dest_custom"]').value.trim() : destSel;
+        const stage = dp.querySelector('[data-f="stage"]').value;
+        if (!newName || !dest) return;
+        await createLink(newName, dest, stage);
+        const newMeta = {};
+        const cta = dp.querySelector('[data-f="cta"]').value.trim().toLowerCase();
+        const path = dp.querySelector('[data-f="path"]').value;
+        if (cta) { newMeta.cta_word = cta; newMeta.shopify_link = 'https://hellomelmo.com/' + cta; }
+        if (path) newMeta.dm_path = path;
+        newMeta.video_urls = dp.querySelector('[data-f="videos"]').value.trim();
+        newMeta.notes = dp.querySelector('[data-f="notes"]').value.trim();
+        LS.set('link_meta_' + newName, newMeta);
+        linkStatsOpen[link.name + '_dupe'] = false;
+        _cachedLinks = null; _cachedClicks = null;
+        await renderFunnel();
+        await renderLinkTracker();
+      });
+      const cancelDupe = document.createElement('button');
+      cancelDupe.className = 'habit-action-pill';
+      cancelDupe.textContent = 'Cancel';
+      cancelDupe.addEventListener('click', () => {
+        linkStatsOpen[link.name + '_dupe'] = false;
+        renderLinkTracker();
+      });
+      dupeActions.appendChild(createDupe);
+      dupeActions.appendChild(cancelDupe);
+      dp.appendChild(dupeActions);
+      item.appendChild(dp);
     }
 
     // Stats panel with click log
