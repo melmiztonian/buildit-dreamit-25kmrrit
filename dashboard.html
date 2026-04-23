@@ -4530,12 +4530,22 @@ async function renderLinkTracker() {
       b.addEventListener('click', fn);
       return b;
     };
-    actions.appendChild(mkBtn('Copy', '', () => {
+    const copyTrack = mkBtn('Copy', '', () => {
       navigator.clipboard.writeText(trackUrl).then(() => {
-        actions.firstChild.textContent = 'Copied!';
-        setTimeout(() => { actions.firstChild.textContent = 'Copy'; }, 1500);
+        copyTrack.textContent = 'Copied!';
+        setTimeout(() => { copyTrack.textContent = 'Copy'; }, 1500);
       });
-    }));
+    });
+    actions.appendChild(copyTrack);
+    if (meta.shopify_link) {
+      const copyShop = mkBtn('Shopify', '', () => {
+        navigator.clipboard.writeText(meta.shopify_link).then(() => {
+          copyShop.textContent = 'Copied!';
+          setTimeout(() => { copyShop.textContent = 'Shopify'; }, 1500);
+        });
+      });
+      actions.appendChild(copyShop);
+    }
     actions.appendChild(mkBtn(linkStatsOpen[link.name + '_edit'] ? 'Close' : 'Edit', linkStatsOpen[link.name + '_edit'] ? 'active' : '', () => {
       linkStatsOpen[link.name + '_edit'] = !linkStatsOpen[link.name + '_edit'];
       renderLinkTracker();
