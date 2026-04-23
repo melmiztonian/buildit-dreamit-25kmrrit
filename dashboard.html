@@ -1381,13 +1381,22 @@ body {
 }
 .funnel-conv-arrow {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   color: var(--sand);
-  font-size: 0.9rem;
-  width: 20px;
-  min-width: 20px;
+  font-size: 0.75rem;
+  width: 28px;
+  min-width: 28px;
+  gap: 1px;
+}
+.funnel-conv-rate {
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--terracotta);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 .funnel-col-empty {
   font-size: 0.72rem;
@@ -4187,7 +4196,11 @@ async function renderFunnel() {
       if (i > 0) {
         const arrow = document.createElement('div');
         arrow.className = 'funnel-conv-arrow';
-        arrow.textContent = '\u25B6';
+        const prevStageId = lane.stages[i - 1];
+        const prevCount = stageCounts[prevStageId] || 0;
+        const thisCount = stageCounts[stageId] || 0;
+        const rate = prevCount > 0 ? Math.round((thisCount / prevCount) * 100) : 0;
+        arrow.innerHTML = '\u25B6' + (prevCount > 0 ? '<span class="funnel-conv-rate">' + rate + '%</span>' : '');
         row.appendChild(arrow);
       }
 
