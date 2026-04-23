@@ -4466,25 +4466,58 @@ async function renderLinkTracker() {
       const embedCode = '<script>\nfunction trackClick(n){var v=localStorage.getItem("_vid");if(!v){v="v_"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem("_vid",v)}fetch("' + SB_URL + '/rest/v1/link_clicks",{method:"POST",headers:{"apikey":"' + SB_KEY + '","Authorization":"Bearer ' + SB_KEY + '","Content-Type":"application/json"},body:JSON.stringify({link_name:n,visitor_id:v,referrer:document.referrer||null,user_agent:navigator.userAgent||null})}).catch(function(){})}\n<\/script>';
       const btnCode = '<button onclick="trackClick(\'' + link.name + '\')">Your CTA text</button>';
       const linkCode = '<a href="YOUR_URL" onclick="trackClick(\'' + link.name + '\')">Your link text</a>';
+      const autoTrackCode = '<script>\nvar PAGE_PREFIX = \'' + (link.funnel_stage || 'page').split('-')[0] + '\';\nvar FUNNEL_STAGE = \'' + (link.funnel_stage || 'link-click') + '\';\n<\/script>\n<script src="https://melmiztonian.github.io/buildit-dreamit-25kmrrit/track.js"><\/script>';
       embedPanel.innerHTML = `
-        <div style="font-size:0.78rem;font-weight:600;color:var(--text);margin-bottom:8px;">Embed tracking on any page</div>
-        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;">1. Add this script once to your page:</div>
-        <textarea style="width:100%;height:60px;font-family:monospace;font-size:0.68rem;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--bg);color:var(--text);resize:vertical;" readonly>${embedCode}</textarea>
-        <div style="font-size:0.72rem;color:var(--muted);margin:8px 0 6px;">2. Add to your button or link:</div>
-        <textarea style="width:100%;height:30px;font-family:monospace;font-size:0.68rem;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--bg);color:var(--text);resize:none;" readonly>${btnCode}</textarea>
-        <textarea style="width:100%;height:30px;font-family:monospace;font-size:0.68rem;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--bg);color:var(--text);resize:none;margin-top:4px;" readonly>${linkCode}</textarea>
+        <div style="font-size:0.82rem;font-weight:700;color:var(--text);margin-bottom:10px;">Option 1: Auto-track ALL buttons on a page</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;">Paste this before &lt;/body&gt;. Finds every button, names it automatically, and creates links in your tracker.</div>
+        <textarea style="width:100%;height:70px;font-family:monospace;font-size:0.68rem;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--bg);color:var(--text);resize:vertical;" readonly>${autoTrackCode}</textarea>
+        <div style="font-size:0.72rem;color:var(--muted);margin:6px 0 8px;">Change PAGE_PREFIX and FUNNEL_STAGE per page:</div>
+        <table style="width:100%;border-collapse:collapse;font-size:0.7rem;margin-bottom:10px;">
+          <thead><tr style="border-bottom:1px solid var(--border);text-align:left;">
+            <th style="padding:4px 8px;color:var(--muted);">Page</th>
+            <th style="padding:4px 8px;color:var(--muted);">PREFIX</th>
+            <th style="padding:4px 8px;color:var(--muted);">FUNNEL_STAGE</th>
+          </tr></thead>
+          <tbody>
+            <tr style="border-bottom:1px solid #f0ebe3;"><td style="padding:4px 8px;">Connection Pack</td><td style="padding:4px 8px;font-family:monospace;color:var(--terracotta);">cp</td><td style="padding:4px 8px;font-family:monospace;color:var(--terracotta);">cp-page</td></tr>
+            <tr style="border-bottom:1px solid #f0ebe3;"><td style="padding:4px 8px;">Beta List</td><td style="padding:4px 8px;font-family:monospace;color:var(--terracotta);">beta</td><td style="padding:4px 8px;font-family:monospace;color:var(--terracotta);">beta-page</td></tr>
+            <tr style="border-bottom:1px solid #f0ebe3;"><td style="padding:4px 8px;">Hub Sales</td><td style="padding:4px 8px;font-family:monospace;color:var(--terracotta);">hub</td><td style="padding:4px 8px;font-family:monospace;color:var(--terracotta);">hub-page</td></tr>
+            <tr><td style="padding:4px 8px;">Tripwire</td><td style="padding:4px 8px;font-family:monospace;color:var(--terracotta);">tw</td><td style="padding:4px 8px;font-family:monospace;color:var(--terracotta);">tw-page</td></tr>
+          </tbody>
+        </table>
+        <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">
+          <div style="font-size:0.82rem;font-weight:700;color:var(--text);margin-bottom:10px;">Option 2: Track a specific button/form</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;">1. Add this script once to your page:</div>
+          <textarea style="width:100%;height:60px;font-family:monospace;font-size:0.68rem;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--bg);color:var(--text);resize:vertical;" readonly>${embedCode}</textarea>
+          <div style="font-size:0.72rem;color:var(--muted);margin:8px 0 6px;">2. Add to your button or link:</div>
+          <textarea style="width:100%;height:30px;font-family:monospace;font-size:0.68rem;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--bg);color:var(--text);resize:none;" readonly>${btnCode}</textarea>
+          <textarea style="width:100%;height:30px;font-family:monospace;font-size:0.68rem;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--bg);color:var(--text);resize:none;margin-top:4px;" readonly>${linkCode}</textarea>
+        </div>
       `;
-      const copyEmbed = document.createElement('button');
-      copyEmbed.className = 'habit-action-pill';
-      copyEmbed.style.marginTop = '8px';
-      copyEmbed.textContent = 'Copy all';
-      copyEmbed.addEventListener('click', () => {
-        navigator.clipboard.writeText(embedCode + '\n\n' + btnCode).then(() => {
-          copyEmbed.textContent = 'Copied!';
-          setTimeout(() => { copyEmbed.textContent = 'Copy all'; }, 1500);
+      // Copy buttons
+      const copyRow = document.createElement('div');
+      copyRow.style.cssText = 'display:flex;gap:6px;margin-top:8px;justify-content:flex-end;';
+      const copyAuto = document.createElement('button');
+      copyAuto.className = 'habit-action-pill';
+      copyAuto.textContent = 'Copy auto-track';
+      copyAuto.addEventListener('click', () => {
+        navigator.clipboard.writeText(autoTrackCode).then(() => {
+          copyAuto.textContent = 'Copied!';
+          setTimeout(() => { copyAuto.textContent = 'Copy auto-track'; }, 1500);
         });
       });
-      embedPanel.appendChild(copyEmbed);
+      const copyManual = document.createElement('button');
+      copyManual.className = 'habit-action-pill';
+      copyManual.textContent = 'Copy manual';
+      copyManual.addEventListener('click', () => {
+        navigator.clipboard.writeText(embedCode + '\n\n' + btnCode).then(() => {
+          copyManual.textContent = 'Copied!';
+          setTimeout(() => { copyManual.textContent = 'Copy manual'; }, 1500);
+        });
+      });
+      copyRow.appendChild(copyAuto);
+      copyRow.appendChild(copyManual);
+      embedPanel.appendChild(copyRow);
       item.appendChild(embedPanel);
     }
 
