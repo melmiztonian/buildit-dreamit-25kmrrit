@@ -4340,139 +4340,158 @@ async function renderLinkTracker() {
     container.appendChild(guide);
   }
 
-  // Filter pills
-  if (!linkStatsOpen._filter) linkStatsOpen._filter = 'all';
-  const filterWrap = document.createElement('div');
-  filterWrap.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;justify-content:center;';
-  const filters = [
-    { id: 'all', label: 'All' },
-    { id: 'dm-link', label: 'DM Links' },
-    { id: 'cp-page', label: 'CP Page' },
-    { id: 'beta-page', label: 'Beta Page' },
-    { id: 'hub-page', label: 'Hub Page' },
-    { id: 'cp-optin', label: 'CP Opt-in' },
-    { id: 'tw-page', label: 'Tripwire' },
-    { id: 'em-nurture', label: 'Nurture' },
-    { id: 'em-nurture-offer', label: 'Nurture Offer' },
-    { id: 'em-beta', label: 'Beta Email' },
-    { id: 'has-clicks', label: 'Has Clicks' },
-    { id: 'no-clicks', label: 'No Clicks' },
-  ];
-  filters.forEach(f => {
-    const btn = document.createElement('button');
-    btn.className = 'mini-nav-pill' + (linkStatsOpen._filter === f.id ? ' active' : '');
-    if (linkStatsOpen._filter === f.id) btn.style.cssText += 'background:var(--terracotta);color:#fff;border-color:var(--terracotta);';
-    btn.textContent = f.label;
-    btn.addEventListener('click', () => {
-      linkStatsOpen._filter = f.id;
+  // Add link button at top
+  const addBtn = document.createElement('button');
+  addBtn.className = 'todo-add-btn';
+  addBtn.style.marginBottom = '14px';
+  addBtn.textContent = '+ Create trackable link';
+  addBtn.addEventListener('click', () => {
+    linkAddOpen = !linkAddOpen;
+    renderLinkTracker();
+  });
+  container.appendChild(addBtn);
+
+  // Add form (if open) — rendered here at top
+  if (linkAddOpen) {
+    const lanesData2 = LS.get('funnel_lanes', [
+      { label: 'CP', stages: ['dm-link-cp', 'cp-page', 'cp-optin', 'tw-page', 'em-nurture', 'em-nurture-offer'] },
+      { label: 'Beta', stages: ['dm-link-beta', 'beta-page', 'em-beta'] },
+      { label: 'Hub', stages: ['dm-link-hub', 'hub-page'] },
+    ]);
+    let stageOpts2 = '';
+    lanesData2.forEach(lane => {
+      stageOpts2 += '<optgroup label="' + lane.label + ' path">';
+      lane.stages.forEach(stageId => {
+        const stage = FUNNEL_STAGES.find(s => s.id === stageId);
+        const label = stage ? (LS.get('funnel_label_' + stageId, null) || stage.label) : stageId;
+        stageOpts2 += '<option value="' + stageId + '">' + label + '</option>';
+      });
+      stageOpts2 += '</optgroup>';
+    });
+    const form = document.createElement('div');
+    form.className = 'link-add-form open';
+    form.style.marginBottom = '14px';
+    form.innerHTML = `
+      <input type="text" id="link-new-name" placeholder="Link name (e.g. dm-connect-v1)">
+      <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Destination page</label>
+      <select id="link-new-dest" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:4px;">
+        <option value="https://hellomelmo.com/connection">Connection Pack (/connection)</option>
+        <option value="https://hellomelmo.com/beta">Beta List (/beta)</option>
+        <option value="https://hellomelmo.com/hub">Hub Sales Page (/hub)</option>
+        <option value="_custom">Custom URL...</option>
+      </select>
+      <input type="text" id="link-new-dest-custom" placeholder="https://..." style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:8px;display:none;">
+      <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Funnel stage</label>
+      <select id="link-new-stage" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:8px;">
+        ${stageOpts2}
+      </select>
+      <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">CTA word (auto-generates Shopify link)</label>
+      <input type="text" id="link-new-cta" placeholder="e.g. connect" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:4px;">
+      <div id="link-new-shopify-preview" style="font-size:0.72rem;color:var(--sage);margin-bottom:8px;">Shopify link: (enter CTA word above)</div>
+      <select id="link-new-path" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:8px;">
+        <option value="">Destination path (for DM links)</option>
+        <option value="cp">Connection Pack</option>
+        <option value="beta">Beta List</option>
+        <option value="hub">Hub Direct</option>
+      </select>
+      <div class="hab-form-actions">
+        <button class="btn-sm" id="link-create-btn">Create</button>
+        <button class="btn-sm" id="link-cancel-btn">Cancel</button>
+      </div>
+    `;
+    container.appendChild(form);
+    form.querySelector('#link-new-dest').addEventListener('change', (e) => {
+      form.querySelector('#link-new-dest-custom').style.display = e.target.value === '_custom' ? '' : 'none';
+    });
+    form.querySelector('#link-new-cta').addEventListener('input', (e) => {
+      const w = e.target.value.trim().toLowerCase();
+      form.querySelector('#link-new-shopify-preview').textContent = 'Shopify link: ' + (w ? 'hellomelmo.com/' + w : '(enter CTA word above)');
+    });
+    form.querySelector('#link-create-btn').addEventListener('click', async () => {
+      const name = form.querySelector('#link-new-name').value.trim().replace(/\s+/g, '-').toLowerCase();
+      const destSel = form.querySelector('#link-new-dest').value;
+      const dest = destSel === '_custom' ? form.querySelector('#link-new-dest-custom').value.trim() : destSel;
+      let stage = form.querySelector('#link-new-stage').value;
+      const path = form.querySelector('#link-new-path').value;
+      const ctaWord = form.querySelector('#link-new-cta').value.trim().toLowerCase();
+      if (stage === 'dm-link' && path) stage = 'dm-link-' + path;
+      if (!name || !dest) return;
+      await createLink(name, dest, stage);
+      const meta = { ...LS.get('link_meta_' + name, {}) };
+      if (path) meta.dm_path = path;
+      if (ctaWord) { meta.cta_word = ctaWord; meta.shopify_link = 'https://hellomelmo.com/' + ctaWord; }
+      LS.set('link_meta_' + name, meta);
+      linkAddOpen = false;
+      _cachedLinks = null; _cachedClicks = null;
+      await renderFunnel();
+      await renderLinkTracker();
+    });
+    form.querySelector('#link-cancel-btn').addEventListener('click', () => {
+      linkAddOpen = false;
       renderLinkTracker();
     });
-    filterWrap.appendChild(btn);
-  });
-  container.appendChild(filterWrap);
+  }
 
-  // Apply filter
-  const filteredLinks = links.filter(link => {
-    const f = linkStatsOpen._filter;
-    if (f === 'all') return true;
-    if (f === 'has-clicks') return (uniqueCounts[link.name] || 0) > 0;
-    if (f === 'no-clicks') return (uniqueCounts[link.name] || 0) === 0;
-    if (f === 'dm-link') return (link.funnel_stage || '').startsWith('dm-link');
-    return link.funnel_stage === f;
-  });
+  // Table header
+  const tableHeader = document.createElement('div');
+  tableHeader.style.cssText = 'display:grid;grid-template-columns:1fr auto auto auto;gap:8px;padding:6px 10px;font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;border-bottom:2px solid var(--border);margin-bottom:4px;';
+  tableHeader.innerHTML = '<span>Link</span><span style="text-align:center;">Clicks</span><span style="text-align:center;">Stage</span><span style="text-align:right;">Actions</span>';
+  container.appendChild(tableHeader);
 
-  for (const link of filteredLinks) {
+  for (const link of links) {
     const item = document.createElement('div');
     item.className = 'link-item';
     item.id = 'link-item-' + link.name;
-    item.style.scrollMarginTop = '60px';
-    item.style.transition = 'box-shadow 0.3s';
+    item.style.cssText = 'scroll-margin-top:60px;transition:box-shadow 0.3s;display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:10px;margin-bottom:2px;border-radius:8px;';
     const clickCount = uniqueCounts[link.name] || 0;
     const trackUrl = LINK_BASE + encodeURIComponent(link.name);
-    const stageName = (FUNNEL_STAGES.find(s => s.id === link.funnel_stage) || {}).label || link.funnel_stage || 'Link Click';
+    const stageName = (FUNNEL_STAGES.find(s => s.id === link.funnel_stage) || {}).label || link.funnel_stage || '';
     const meta = LS.get('link_meta_' + link.name, {});
 
-    // Header
-    const hdr = document.createElement('div');
-    hdr.className = 'link-item-header';
-    hdr.innerHTML = `
-      <span class="link-name">${link.name}</span>
-      <span class="link-clicks-badge">${clickCount} unique click${clickCount !== 1 ? 's' : ''}</span>
-      <span class="hs-badge month" style="font-size:0.65rem;padding:2px 8px;">${stageName}</span>
-    `;
-    item.appendChild(hdr);
+    // Name
+    const nameEl = document.createElement('div');
+    nameEl.innerHTML = '<div class="link-name" style="font-size:0.82rem;">' + link.name + '</div>';
+    item.appendChild(nameEl);
 
-    // URLs + meta
-    const urlDiv = document.createElement('div');
-    urlDiv.style.cssText = 'margin-bottom:6px;';
-    let urlHtml = `<div class="link-url">${trackUrl}</div><div class="link-dest">\u2192 ${link.destination}</div>`;
-    if (meta.shopify_link) urlHtml += `<div class="link-dest" style="color:var(--sage);">Shopify link: ${meta.shopify_link}</div>`;
-    if (meta.video_urls) urlHtml += `<div class="link-dest" style="color:var(--terracotta);">Video: ${meta.video_urls}</div>`;
-    urlDiv.innerHTML = urlHtml;
-    item.appendChild(urlDiv);
+    // Clicks
+    const clicksEl = document.createElement('span');
+    clicksEl.className = 'link-clicks-badge';
+    clicksEl.textContent = clickCount;
+    item.appendChild(clicksEl);
 
-    // Copy buttons row
-    const copyRow = document.createElement('div');
-    copyRow.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;';
-    const mkCopyBtn = (label, text) => {
+    // Stage
+    const stageEl = document.createElement('span');
+    stageEl.className = 'hs-badge month';
+    stageEl.style.cssText = 'font-size:0.6rem;padding:2px 6px;';
+    stageEl.textContent = stageName;
+    item.appendChild(stageEl);
+
+    // Actions
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:4px;justify-content:flex-end;';
+    const mkBtn = (label, cls, fn) => {
       const b = document.createElement('button');
-      b.className = 'habit-action-pill';
-      b.style.fontSize = '0.68rem';
+      b.className = 'habit-action-pill ' + (cls || '');
+      b.style.fontSize = '0.65rem';
       b.textContent = label;
-      b.addEventListener('click', () => {
-        navigator.clipboard.writeText(text).then(() => {
-          b.textContent = 'Copied!';
-          setTimeout(() => { b.textContent = label; }, 1500);
-        });
-      });
+      b.addEventListener('click', fn);
       return b;
     };
-    copyRow.appendChild(mkCopyBtn('Copy tracking link', trackUrl));
-    if (meta.shopify_link) copyRow.appendChild(mkCopyBtn('Copy Shopify link', meta.shopify_link));
-    item.appendChild(copyRow);
-
-    // Actions row 1
-    const actions = document.createElement('div');
-    actions.className = 'link-actions';
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'habit-action-pill';
-    copyBtn.textContent = 'Copy Link';
-    copyBtn.addEventListener('click', () => {
+    actions.appendChild(mkBtn('Copy', '', () => {
       navigator.clipboard.writeText(trackUrl).then(() => {
-        copyBtn.textContent = 'Copied!';
-        setTimeout(() => { copyBtn.textContent = 'Copy Link'; }, 1500);
+        actions.firstChild.textContent = 'Copied!';
+        setTimeout(() => { actions.firstChild.textContent = 'Copy'; }, 1500);
       });
-    });
-    const editBtn = document.createElement('button');
-    editBtn.className = 'habit-action-pill' + (linkStatsOpen[link.name + '_edit'] ? ' active' : '');
-    editBtn.textContent = linkStatsOpen[link.name + '_edit'] ? 'Close' : 'Edit';
-    editBtn.addEventListener('click', () => {
+    }));
+    actions.appendChild(mkBtn(linkStatsOpen[link.name + '_edit'] ? 'Close' : 'Edit', linkStatsOpen[link.name + '_edit'] ? 'active' : '', () => {
       linkStatsOpen[link.name + '_edit'] = !linkStatsOpen[link.name + '_edit'];
       renderLinkTracker();
-    });
-    const embedBtn = document.createElement('button');
-    embedBtn.className = 'habit-action-pill';
-    embedBtn.textContent = 'Embed';
-    embedBtn.addEventListener('click', () => {
-      linkStatsOpen[link.name + '_embed'] = !linkStatsOpen[link.name + '_embed'];
-      renderLinkTracker();
-    });
-    const statsBtn = document.createElement('button');
-    statsBtn.className = 'habit-action-pill' + (linkStatsOpen[link.name] ? ' active' : '');
-    statsBtn.textContent = linkStatsOpen[link.name] ? 'Hide Stats' : 'Stats';
-    statsBtn.addEventListener('click', () => {
+    }));
+    actions.appendChild(mkBtn(linkStatsOpen[link.name] ? 'Hide' : 'Stats', linkStatsOpen[link.name] ? 'active' : '', () => {
       linkStatsOpen[link.name] = !linkStatsOpen[link.name];
       renderLinkTracker();
-    });
-    const delBtn = document.createElement('button');
-    delBtn.className = 'habit-action-pill danger';
-    delBtn.textContent = 'Delete';
-    delBtn.addEventListener('click', () => deleteLink(link.name));
-    actions.appendChild(copyBtn);
-    actions.appendChild(editBtn);
-    actions.appendChild(embedBtn);
-    actions.appendChild(statsBtn);
-    actions.appendChild(delBtn);
+    }));
+    actions.appendChild(mkBtn('Del', 'danger', () => deleteLink(link.name)));
     item.appendChild(actions);
 
     // Edit panel
@@ -4727,97 +4746,6 @@ async function renderLinkTracker() {
     container.appendChild(item);
   }
 
-  // Add link button + form
-  const addBtn = document.createElement('button');
-  addBtn.className = 'todo-add-btn';
-  addBtn.textContent = '+ Create trackable link';
-  addBtn.addEventListener('click', () => {
-    linkAddOpen = !linkAddOpen;
-    renderLinkTracker();
-  });
-  container.appendChild(addBtn);
-
-  if (linkAddOpen) {
-    const lanesData = LS.get('funnel_lanes', [
-      { label: 'CP', stages: ['dm-link-cp', 'cp-page', 'cp-optin', 'tw-page', 'em-nurture', 'em-nurture-offer'] },
-      { label: 'Beta', stages: ['dm-link-beta', 'beta-page', 'em-beta'] },
-      { label: 'Hub', stages: ['dm-link-hub', 'hub-page'] },
-    ]);
-    let stageOpts = '';
-    lanesData.forEach(lane => {
-      stageOpts += `<optgroup label="${lane.label} path">`;
-      lane.stages.forEach(stageId => {
-        const stage = FUNNEL_STAGES.find(s => s.id === stageId);
-        const label = stage ? (LS.get('funnel_label_' + stageId, null) || stage.label) : stageId;
-        stageOpts += `<option value="${stageId}">${label}</option>`;
-      });
-      stageOpts += '</optgroup>';
-    });
-    const form = document.createElement('div');
-    form.className = 'link-add-form open';
-    form.innerHTML = `
-      <input type="text" id="link-new-name" placeholder="Link name (e.g. dm-connect-v1)">
-      <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Destination page</label>
-      <select id="link-new-dest" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:4px;">
-        <option value="https://hellomelmo.com/connection">Connection Pack (/connection)</option>
-        <option value="https://hellomelmo.com/beta">Beta List (/beta)</option>
-        <option value="https://hellomelmo.com/hub">Hub Sales Page (/hub)</option>
-        <option value="_custom">Custom URL...</option>
-      </select>
-      <input type="text" id="link-new-dest-custom" placeholder="https://..." style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:8px;display:none;">
-      <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Funnel stage</label>
-      <select id="link-new-stage" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:8px;">
-        ${stageOpts}
-      </select>
-      <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">CTA word (auto-generates Shopify link)</label>
-      <input type="text" id="link-new-cta" placeholder="e.g. connect" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:4px;">
-      <div id="link-new-shopify-preview" style="font-size:0.72rem;color:var(--sage);margin-bottom:8px;">Shopify link: (enter CTA word above)</div>
-      <select id="link-new-path" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:0.85rem;background:var(--card);color:var(--text);outline:none;margin-bottom:8px;">
-        <option value="">Destination path (for DM links)</option>
-        <option value="cp">Connection Pack</option>
-        <option value="beta">Beta List</option>
-        <option value="hub">Hub Direct</option>
-      </select>
-      <div class="hab-form-actions">
-        <button class="btn-sm" id="link-create-btn">Create</button>
-        <button class="btn-sm" id="link-cancel-btn">Cancel</button>
-      </div>
-    `;
-    container.appendChild(form);
-    // Show/hide custom dest input
-    form.querySelector('#link-new-dest').addEventListener('change', (e) => {
-      form.querySelector('#link-new-dest-custom').style.display = e.target.value === '_custom' ? '' : 'none';
-    });
-    // Auto-generate shopify link preview
-    form.querySelector('#link-new-cta').addEventListener('input', (e) => {
-      const w = e.target.value.trim().toLowerCase();
-      form.querySelector('#link-new-shopify-preview').textContent = 'Shopify link: ' + (w ? 'hellomelmo.com/' + w : '(enter CTA word above)');
-    });
-    form.querySelector('#link-create-btn').addEventListener('click', async () => {
-      const name = form.querySelector('#link-new-name').value.trim().replace(/\s+/g, '-').toLowerCase();
-      const destSel = form.querySelector('#link-new-dest').value;
-      const dest = destSel === '_custom' ? form.querySelector('#link-new-dest-custom').value.trim() : destSel;
-      let stage = form.querySelector('#link-new-stage').value;
-      const path = form.querySelector('#link-new-path').value;
-      const ctaWord = form.querySelector('#link-new-cta').value.trim().toLowerCase();
-      // Auto-route DM links to the right sub-stage
-      if (stage === 'dm-link' && path) stage = 'dm-link-' + path;
-      if (!name || !dest) return;
-      await createLink(name, dest, stage);
-      const meta = { ...LS.get('link_meta_' + name, {}) };
-      if (path) meta.dm_path = path;
-      if (ctaWord) { meta.cta_word = ctaWord; meta.shopify_link = 'https://hellomelmo.com/' + ctaWord; }
-      LS.set('link_meta_' + name, meta);
-      linkAddOpen = false;
-      _cachedLinks = null; _cachedClicks = null;
-      await renderFunnel();
-      await renderLinkTracker();
-    });
-    form.querySelector('#link-cancel-btn').addEventListener('click', () => {
-      linkAddOpen = false;
-      renderLinkTracker();
-    });
-  }
 }
 
 /* ================================================================
