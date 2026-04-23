@@ -4432,13 +4432,53 @@ async function renderLinkTracker() {
     });
   }
 
-  // Table header
+  // Sort state
+  if (!linkStatsOpen._sort) linkStatsOpen._sort = 'name';
+  if (!linkStatsOpen._sortDir) linkStatsOpen._sortDir = 'asc';
+  const sortBy = linkStatsOpen._sort;
+  const sortDir = linkStatsOpen._sortDir;
+
+  const sortedLinks = [...links].sort((a, b) => {
+    let va, vb;
+    if (sortBy === 'name') { va = a.name.toLowerCase(); vb = b.name.toLowerCase(); }
+    else if (sortBy === 'clicks') { va = uniqueCounts[a.name] || 0; vb = uniqueCounts[b.name] || 0; }
+    else if (sortBy === 'stage') { va = (a.funnel_stage || '').toLowerCase(); vb = (b.funnel_stage || '').toLowerCase(); }
+    else { va = a.name; vb = b.name; }
+    if (va < vb) return sortDir === 'asc' ? -1 : 1;
+    if (va > vb) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Table header with sort
   const tableHeader = document.createElement('div');
   tableHeader.style.cssText = 'display:grid;grid-template-columns:1fr auto auto auto;gap:8px;padding:6px 10px;font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;border-bottom:2px solid var(--border);margin-bottom:4px;';
-  tableHeader.innerHTML = '<span>Link</span><span style="text-align:center;">Clicks</span><span style="text-align:center;">Stage</span><span style="text-align:right;">Actions</span>';
+  const mkSortHead = (label, key, align) => {
+    const s = document.createElement('span');
+    s.style.cssText = 'cursor:pointer;user-select:none;text-align:' + (align || 'left') + ';';
+    const arrow = sortBy === key ? (sortDir === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+    s.textContent = label + arrow;
+    if (sortBy === key) s.style.color = 'var(--terracotta)';
+    s.addEventListener('click', () => {
+      if (linkStatsOpen._sort === key) {
+        linkStatsOpen._sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        linkStatsOpen._sort = key;
+        linkStatsOpen._sortDir = key === 'clicks' ? 'desc' : 'asc';
+      }
+      renderLinkTracker();
+    });
+    return s;
+  };
+  tableHeader.appendChild(mkSortHead('Link', 'name'));
+  tableHeader.appendChild(mkSortHead('Clicks', 'clicks', 'center'));
+  tableHeader.appendChild(mkSortHead('Stage', 'stage', 'center'));
+  const actionsHead = document.createElement('span');
+  actionsHead.style.textAlign = 'right';
+  actionsHead.textContent = 'Actions';
+  tableHeader.appendChild(actionsHead);
   container.appendChild(tableHeader);
 
-  for (const link of links) {
+  for (const link of sortedLinks) {
     const item = document.createElement('div');
     item.className = 'link-item';
     item.id = 'link-item-' + link.name;
