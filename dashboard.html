@@ -4465,7 +4465,7 @@ async function renderLinkTracker() {
 
   // Table header with sort
   const tableHeader = document.createElement('div');
-  tableHeader.style.cssText = 'display:grid;grid-template-columns:1fr 60px 90px 50px 180px;gap:8px;padding:6px 10px;font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;border-bottom:2px solid var(--border);margin-bottom:4px;';
+  tableHeader.style.cssText = 'display:grid;grid-template-columns:1fr 50px 80px 45px minmax(200px, auto);gap:8px;padding:6px 10px;font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;border-bottom:2px solid var(--border);margin-bottom:4px;';
   const mkSortHead = (label, key, align) => {
     const s = document.createElement('span');
     s.style.cssText = 'cursor:pointer;user-select:none;text-align:' + (align || 'left') + ';';
@@ -4497,7 +4497,7 @@ async function renderLinkTracker() {
     const item = document.createElement('div');
     item.className = 'link-item';
     item.id = 'link-item-' + link.name;
-    item.style.cssText = 'scroll-margin-top:60px;transition:box-shadow 0.3s;display:grid;grid-template-columns:1fr 60px 90px 50px 180px;gap:8px;align-items:center;padding:10px;margin-bottom:2px;border-radius:8px;';
+    item.style.cssText = 'scroll-margin-top:60px;transition:box-shadow 0.3s;display:grid;grid-template-columns:1fr 50px 80px 45px minmax(200px, auto);gap:8px;align-items:center;padding:10px;margin-bottom:2px;border-radius:8px;';
     const clickCount = uniqueCounts[link.name] || 0;
     const trackUrl = LINK_BASE + encodeURIComponent(link.name);
     const stageName = (FUNNEL_STAGES.find(s => s.id === link.funnel_stage) || {}).label || link.funnel_stage || '';
