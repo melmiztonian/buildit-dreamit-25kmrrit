@@ -33,6 +33,23 @@
     return s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30);
   }
 
+  // Extract a meaningful section name from Shopify section IDs
+  // e.g. "shopify-section-template--20311414636730__final_cta_section_jeDdjw" -> "final-cta-section"
+  function getSectionName(el) {
+    var section = el.closest('[id*="shopify-section"], section[id], [id]');
+    if (!section || !section.id) return null;
+    var id = section.id;
+    // Shopify format: shopify-section-template--{number}__{name}_{hash}
+    var match = id.match(/__([a-zA-Z_]+)/);
+    if (match) {
+      // Remove trailing hash (last _ followed by random chars)
+      var name = match[1].replace(/_[a-zA-Z0-9]{4,}$/, '');
+      return name.replace(/_/g, '-').replace(/-+$/, '');
+    }
+    // Fallback: use the id directly, cleaned up
+    return cleanText(id).slice(0, 25);
+  }
+
   function trackClick(name) {
     fetch(SB + '/rest/v1/link_clicks', {
       method: 'POST',
@@ -52,7 +69,6 @@
   }
 
   function ensureLink(name) {
-    // Check if link exists, create if not
     fetch(SB + '/rest/v1/links?name=eq.' + encodeURIComponent(name) + '&select=name', {
       headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY }
     }).then(function(r) { return r.json(); }).then(function(rows) {
@@ -76,7 +92,6 @@
   }
 
   window.addEventListener('load', function() {
-    // Find all clickable elements
     var buttons = document.querySelectorAll('a[href], button, [role="button"], input[type="submit"], .btn, [class*="button"], [class*="btn"]');
     var seen = {};
 
@@ -84,8 +99,13 @@
       var text = cleanText(btn.textContent || btn.value || '');
       if (!text || text.length < 2) return;
 
-      // Generate unique name
-      var baseName = PREFIX + '-' + text;
+      // Get section name from parent Shopify section
+      var section = getSectionName(btn);
+
+      // Build name: prefix-section-buttontext or prefix-buttontext
+      var baseName = section ? PREFIX + '-' + section + '-' + text : PREFIX + '-' + text;
+
+      // Deduplicate if same name appears multiple times
       if (seen[baseName]) {
         seen[baseName]++;
         baseName = baseName + '-' + seen[baseName];
@@ -94,10 +114,8 @@
       }
       var linkName = baseName;
 
-      // Ensure the link exists in Supabase
       ensureLink(linkName);
 
-      // Track click
       btn.addEventListener('click', function() {
         trackClick(linkName);
       });
