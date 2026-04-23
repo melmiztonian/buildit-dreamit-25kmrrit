@@ -102,10 +102,30 @@
       // Get section name from parent Shopify section
       var section = getSectionName(btn);
 
-      // Build name: prefix-section-buttontext or prefix-buttontext
-      var baseName = section ? PREFIX + '-' + section + '-' + text : PREFIX + '-' + text;
+      // Try to find a nearby tagline, heading, or title to make the name unique
+      var context = '';
+      var card = btn.closest('[class*="window"], [class*="card"], [class*="block"], [class*="item"], [class*="slide"]');
+      if (card) {
+        var tagline = card.querySelector('[class*="tagline"], [class*="subtitle"], [class*="eyebrow"], [class*="titlebar-text"]');
+        if (tagline && tagline.textContent.trim()) {
+          context = cleanText(tagline.textContent);
+        } else {
+          var heading = card.querySelector('h2, h3, h4, [class*="heading"]');
+          if (heading && heading.textContent.trim()) {
+            context = cleanText(heading.textContent).slice(0, 25);
+          }
+        }
+      }
 
-      // Number duplicates
+      // Build name: prefix-section-context-buttontext or prefix-section-buttontext
+      var baseName;
+      if (context) {
+        baseName = PREFIX + '-' + (section ? section + '-' : '') + context;
+      } else {
+        baseName = section ? PREFIX + '-' + section + '-' + text : PREFIX + '-' + text;
+      }
+
+      // Number duplicates (fallback, shouldn't happen often with context)
       if (seen[baseName]) {
         seen[baseName]++;
         var linkName = baseName + '-' + seen[baseName];
