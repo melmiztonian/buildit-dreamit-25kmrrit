@@ -1361,12 +1361,10 @@ body {
 .funnel-link-card.dragging { opacity: 0.4; transform: scale(0.95); }
 .funnel-link-card.drag-over { box-shadow: 0 -2px 0 0 var(--terracotta); }
 .funnel-link-name {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
 .funnel-link-clicks {
   font-size: 0.68rem;
@@ -4045,7 +4043,6 @@ async function renderFunnel() {
             <button class="funnel-hide-btn" title="Hide">\u00D7</button>
           </div>
           <div class="funnel-link-clicks">${link.clicks} unique click${link.clicks !== 1 ? 's' : ''}</div>
-          <div class="funnel-link-dest">\u2192 ${link.destination}</div>
         `;
         card.querySelector('.funnel-hide-btn').addEventListener('click', (e) => {
           e.stopPropagation();
