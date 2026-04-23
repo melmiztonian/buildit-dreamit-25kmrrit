@@ -1340,7 +1340,11 @@ body {
   background: var(--bg);
   border-radius: 8px;
   padding: 8px 10px;
+  transition: opacity 0.2s, transform 0.15s;
 }
+.funnel-link-card[draggable="true"] { cursor: grab; }
+.funnel-link-card.dragging { opacity: 0.4; transform: scale(0.95); }
+.funnel-link-card.drag-over { box-shadow: 0 -2px 0 0 var(--terracotta); }
 .funnel-link-name {
   font-size: 0.75rem;
   font-weight: 600;
@@ -3992,29 +3996,76 @@ async function renderFunnel() {
     col.appendChild(header);
     const body = document.createElement('div');
     body.className = 'funnel-col-body';
-    const stLinks = (stageLinks[stage.id] || []).sort((a, b) => b.clicks - a.clicks);
+    // Sort by saved order, then by clicks
+    const savedOrder = LS.get('funnel_link_order_' + stage.id, null);
+    let stLinks = (stageLinks[stage.id] || []);
+    if (savedOrder) {
+      stLinks.sort((a, b) => {
+        const ai = savedOrder.indexOf(a.name);
+        const bi = savedOrder.indexOf(b.name);
+        return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
+      });
+    } else {
+      stLinks.sort((a, b) => b.clicks - a.clicks);
+    }
+
     if (stLinks.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'funnel-col-empty';
       empty.textContent = 'No links yet';
       body.appendChild(empty);
     } else {
+      let dragSrcName = null;
       stLinks.forEach(link => {
         const card = document.createElement('div');
         card.className = 'funnel-link-card';
-        card.style.cursor = 'pointer';
+        card.setAttribute('draggable', 'true');
+        card.dataset.linkName = link.name;
         card.innerHTML = `
           <div class="funnel-link-name">${link.name}</div>
           <div class="funnel-link-clicks">${link.clicks} unique click${link.clicks !== 1 ? 's' : ''}</div>
           <div class="funnel-link-dest">\u2192 ${link.destination}</div>
         `;
-        card.addEventListener('click', () => {
+        // Click to scroll to link tracker
+        card.addEventListener('click', (e) => {
+          if (e.defaultPrevented) return;
           const target = document.getElementById('link-item-' + link.name);
           if (target) {
             target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             target.style.boxShadow = '0 0 0 3px var(--terracotta)';
             setTimeout(() => { target.style.boxShadow = ''; }, 2000);
           }
+        });
+        // Drag events
+        card.addEventListener('dragstart', (e) => {
+          dragSrcName = link.name;
+          card.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+          body.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        });
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          card.classList.add('drag-over');
+        });
+        card.addEventListener('dragleave', () => {
+          card.classList.remove('drag-over');
+        });
+        card.addEventListener('drop', (e) => {
+          e.preventDefault();
+          card.classList.remove('drag-over');
+          if (!dragSrcName || dragSrcName === link.name) return;
+          // Reorder
+          const order = Array.from(body.querySelectorAll('.funnel-link-card')).map(c => c.dataset.linkName);
+          const fromIdx = order.indexOf(dragSrcName);
+          const toIdx = order.indexOf(link.name);
+          order.splice(fromIdx, 1);
+          order.splice(toIdx, 0, dragSrcName);
+          LS.set('funnel_link_order_' + stage.id, order);
+          renderFunnel();
         });
         body.appendChild(card);
       });
