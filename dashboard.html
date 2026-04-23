@@ -4446,8 +4446,8 @@ async function renderLinkTracker() {
   }
 
   // Sort state
-  if (!linkStatsOpen._sort) linkStatsOpen._sort = 'name';
-  if (!linkStatsOpen._sortDir) linkStatsOpen._sortDir = 'asc';
+  if (!linkStatsOpen._sort) linkStatsOpen._sort = 'date';
+  if (!linkStatsOpen._sortDir) linkStatsOpen._sortDir = 'desc';
   const sortBy = linkStatsOpen._sort;
   const sortDir = linkStatsOpen._sortDir;
 
@@ -4456,6 +4456,7 @@ async function renderLinkTracker() {
     if (sortBy === 'name') { va = a.name.toLowerCase(); vb = b.name.toLowerCase(); }
     else if (sortBy === 'clicks') { va = uniqueCounts[a.name] || 0; vb = uniqueCounts[b.name] || 0; }
     else if (sortBy === 'stage') { va = (a.funnel_stage || '').toLowerCase(); vb = (b.funnel_stage || '').toLowerCase(); }
+    else if (sortBy === 'date') { va = a.created_at || ''; vb = b.created_at || ''; }
     else { va = a.name; vb = b.name; }
     if (va < vb) return sortDir === 'asc' ? -1 : 1;
     if (va > vb) return sortDir === 'asc' ? 1 : -1;
@@ -4464,7 +4465,7 @@ async function renderLinkTracker() {
 
   // Table header with sort
   const tableHeader = document.createElement('div');
-  tableHeader.style.cssText = 'display:grid;grid-template-columns:1fr auto auto auto;gap:8px;padding:6px 10px;font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;border-bottom:2px solid var(--border);margin-bottom:4px;';
+  tableHeader.style.cssText = 'display:grid;grid-template-columns:1fr auto auto auto auto;gap:8px;padding:6px 10px;font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;border-bottom:2px solid var(--border);margin-bottom:4px;';
   const mkSortHead = (label, key, align) => {
     const s = document.createElement('span');
     s.style.cssText = 'cursor:pointer;user-select:none;text-align:' + (align || 'left') + ';';
@@ -4485,6 +4486,7 @@ async function renderLinkTracker() {
   tableHeader.appendChild(mkSortHead('Link', 'name'));
   tableHeader.appendChild(mkSortHead('Clicks', 'clicks', 'center'));
   tableHeader.appendChild(mkSortHead('Stage', 'stage', 'center'));
+  tableHeader.appendChild(mkSortHead('New', 'date', 'center'));
   const actionsHead = document.createElement('span');
   actionsHead.style.textAlign = 'right';
   actionsHead.textContent = 'Actions';
@@ -4495,7 +4497,7 @@ async function renderLinkTracker() {
     const item = document.createElement('div');
     item.className = 'link-item';
     item.id = 'link-item-' + link.name;
-    item.style.cssText = 'scroll-margin-top:60px;transition:box-shadow 0.3s;display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:10px;margin-bottom:2px;border-radius:8px;';
+    item.style.cssText = 'scroll-margin-top:60px;transition:box-shadow 0.3s;display:grid;grid-template-columns:1fr auto auto auto auto;gap:8px;align-items:center;padding:10px;margin-bottom:2px;border-radius:8px;';
     const clickCount = uniqueCounts[link.name] || 0;
     const trackUrl = LINK_BASE + encodeURIComponent(link.name);
     const stageName = (FUNNEL_STAGES.find(s => s.id === link.funnel_stage) || {}).label || link.funnel_stage || '';
@@ -4518,6 +4520,12 @@ async function renderLinkTracker() {
     stageEl.style.cssText = 'font-size:0.6rem;padding:2px 6px;';
     stageEl.textContent = stageName;
     item.appendChild(stageEl);
+
+    // Date
+    const dateEl = document.createElement('span');
+    dateEl.style.cssText = 'font-size:0.62rem;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums;';
+    dateEl.textContent = link.created_at ? link.created_at.slice(5, 10) : '';
+    item.appendChild(dateEl);
 
     // Actions
     const actions = document.createElement('div');
