@@ -4544,6 +4544,17 @@ async function renderLinkTracker() {
       linkStatsOpen[link.name] = !linkStatsOpen[link.name];
       renderLinkTracker();
     }));
+    actions.appendChild(mkBtn('Dupe', '', async () => {
+      const newName = prompt('New link name (copy of ' + link.name + '):', link.name + '-copy');
+      if (!newName || !newName.trim()) return;
+      const cleanName = newName.trim().replace(/\s+/g, '-').toLowerCase();
+      await createLink(cleanName, link.destination, link.funnel_stage);
+      const meta = LS.get('link_meta_' + link.name, {});
+      if (Object.keys(meta).length) LS.set('link_meta_' + cleanName, { ...meta });
+      _cachedLinks = null; _cachedClicks = null;
+      await renderFunnel();
+      await renderLinkTracker();
+    }));
     actions.appendChild(mkBtn('Del', 'danger', () => deleteLink(link.name)));
     item.appendChild(actions);
 
