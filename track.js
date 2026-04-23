@@ -146,5 +146,33 @@
       trackClick(PREFIX + '-form-submit');
       ensureLink(PREFIX + '-form-submit');
     });
+
+    // Track Shopify Buy Button iframes
+    // Can't access inside iframes, but can detect clicks via blur/focus trick
+    var buyBtnIframes = document.querySelectorAll('iframe[src*="buy-button"], [class*="shopify-buy"] iframe, .product-component iframe');
+    buyBtnIframes.forEach(function(iframe, i) {
+      var section = getSectionName(iframe);
+      var context = '';
+      var card = iframe.closest('[class*="window"], [class*="card"], [class*="block"], [class*="item"], [class*="section"]');
+      if (card) {
+        var tagline = card.querySelector('[class*="tagline"], [class*="subtitle"], [class*="heading"], h2, h3');
+        if (tagline) context = cleanText(tagline.textContent).slice(0, 25);
+      }
+      var linkName = PREFIX + '-buy' + (context ? '-' + context : '') + (section ? '-' + section : '') + (i > 0 ? '-' + (i + 1) : '');
+      ensureLink(linkName);
+
+      // Detect iframe click via window blur
+      var focused = false;
+      iframe.addEventListener('mouseenter', function() { focused = true; });
+      iframe.addEventListener('mouseleave', function() { focused = false; });
+      window.addEventListener('blur', function() {
+        if (focused) {
+          trackClick(linkName);
+          focused = false;
+          // Re-focus main window after a tick
+          setTimeout(function() { window.focus(); }, 100);
+        }
+      });
+    });
   });
 })();
