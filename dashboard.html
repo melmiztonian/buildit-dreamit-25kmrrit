@@ -5301,6 +5301,14 @@ function bbSyncToHabits(session) {
   const htWeek = LS.get('habit_hipthrusts_' + ws, Array(7).fill(0));
   htWeek[di] = totalHT;
   LS.set('habit_hipthrusts_' + ws, htWeek);
+
+  // Push-ups from BDP: 6-count = 1 per rep, navy seal = 3 per rep
+  const bdpActual = session.bdp_actual || 0;
+  const pushupMultiplier = session.bdp_type === 'navy-seal' ? 3 : 1;
+  const bdpPushups = bdpActual * pushupMultiplier;
+  const pushWeek = LS.get('habit_pushups_' + ws, Array(7).fill(0));
+  pushWeek[di] = bdpPushups;
+  LS.set('habit_pushups_' + ws, pushWeek);
 }
 
 // Clear habit tracker data for a deleted/removed session
@@ -5313,6 +5321,9 @@ function bbClearHabits(date) {
   const htWeek = LS.get('habit_hipthrusts_' + ws, Array(7).fill(0));
   htWeek[di] = 0;
   LS.set('habit_hipthrusts_' + ws, htWeek);
+  const pushWeek = LS.get('habit_pushups_' + ws, Array(7).fill(0));
+  pushWeek[di] = 0;
+  LS.set('habit_pushups_' + ws, pushWeek);
 }
 
 function bbGetToday() {
