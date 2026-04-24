@@ -5480,33 +5480,31 @@ function renderBBWorkout() {
     const s = sess.supersets[i];
     const round = document.createElement('div');
     round.className = 'bb-round';
-    round.style.cssText = 'background:var(--bg);border-radius:10px;padding:12px;margin-bottom:8px;';
+    round.style.cssText = 'background:var(--bg);border-radius:10px;padding:12px;margin-bottom:4px;';
     round.innerHTML = `
       <div style="font-size:0.75rem;font-weight:600;color:var(--terracotta);margin-bottom:8px;">Round ${i + 1}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div>
-          <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">Pull-ups (unas.)</div>
-          ${inp(s.pullup_unassisted, 4)}
+          <div style="font-size:0.68rem;font-weight:600;color:var(--text);margin-bottom:6px;">Pull-ups</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div>
+              <div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Unassisted</div>
+              ${inp(s.pullup_unassisted, 4)}
+            </div>
+            <div>
+              <div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Assisted</div>
+              <div class="bb-pa" style="font-size:0.85rem;text-align:center;padding:5px;color:var(--terracotta);font-weight:600;background:var(--card);border-radius:6px;border:1px solid var(--border);">${8 - s.pullup_unassisted}</div>
+            </div>
+          </div>
         </div>
         <div>
-          <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">Pull-ups (asst.)</div>
-          <div class="bb-pa" style="font-size:0.85rem;text-align:center;padding:5px;color:var(--terracotta);font-weight:600;background:var(--card);border-radius:6px;border:1px solid var(--border);">${8 - s.pullup_unassisted}</div>
-        </div>
-        <div>
-          <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">HT reps</div>
-          ${inp(s.ht_reps)}
-        </div>
-        <div>
-          <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">HT pulses</div>
-          ${inp(s.ht_pulses)}
-        </div>
-        <div>
-          <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">HT hold (sec)</div>
-          ${inp(s.ht_hold)}
-        </div>
-        <div>
-          <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">HT weight (kg)</div>
-          ${inp(s.ht_weight)}
+          <div style="font-size:0.68rem;font-weight:600;color:var(--text);margin-bottom:6px;">Hip Thrusts</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Reps</div>${inp(s.ht_reps)}</div>
+            <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Pulses</div>${inp(s.ht_pulses)}</div>
+            <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Hold (sec)</div>${inp(s.ht_hold)}</div>
+            <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Weight (kg)</div>${inp(s.ht_weight)}</div>
+          </div>
         </div>
       </div>
     `;
@@ -5519,6 +5517,39 @@ function renderBBWorkout() {
       paDiv.textContent = Math.max(0, 8 - v);
     });
     c.appendChild(round);
+
+    // Rest timer between rounds (not after last)
+    if (i < 3) {
+      const rest = document.createElement('div');
+      rest.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:10px;padding:6px 0;margin-bottom:4px;';
+      const restDisplay = document.createElement('span');
+      restDisplay.style.cssText = 'font-size:1rem;font-weight:700;color:var(--sage);font-variant-numeric:tabular-nums;min-width:45px;text-align:center;';
+      restDisplay.textContent = '1:00';
+      const restBtn = document.createElement('button');
+      restBtn.className = 'habit-action-pill';
+      restBtn.style.fontSize = '0.65rem';
+      restBtn.textContent = 'Rest';
+      let restInt = null;
+      let restSec = 60;
+      restBtn.addEventListener('click', () => {
+        if (restInt) { clearInterval(restInt); restInt = null; restBtn.textContent = 'Rest'; restSec = 60; restDisplay.textContent = '1:00'; return; }
+        restSec = 60;
+        restBtn.textContent = 'Stop';
+        restInt = setInterval(() => {
+          restSec--;
+          restDisplay.textContent = Math.floor(restSec / 60) + ':' + String(restSec % 60).padStart(2, '0');
+          if (restSec <= 0) {
+            clearInterval(restInt); restInt = null;
+            restBtn.textContent = 'Rest';
+            restDisplay.textContent = '0:00';
+            bbBeep(1000, 0.3); setTimeout(() => bbBeep(1000, 0.3), 200);
+          }
+        }, 1000);
+      });
+      rest.appendChild(restDisplay);
+      rest.appendChild(restBtn);
+      c.appendChild(rest);
+    }
   }
 
   // BDP section
