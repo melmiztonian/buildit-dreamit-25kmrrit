@@ -3385,6 +3385,31 @@ function renderChallenges() {
           weekGrid.appendChild(col);
         });
         card.appendChild(weekGrid);
+
+        // Stats badges (like habit cards)
+        const weekDone = weekData.filter(v => v === 1 || v === true).length;
+        const stats = document.createElement('div');
+        stats.className = 'habit-stats';
+        stats.style.marginTop = '8px';
+        const weekMet = weekDone >= ch.freq;
+        stats.innerHTML = `
+          <span class="hs-badge week">Week: <strong>${weekDone}</strong>/${ch.freq}<span class="hs-check">${weekMet ? '\u2713' : ''}</span></span>
+          <span class="hs-badge month">${completed}/${totalDays} done</span>
+          <span class="hs-badge year">${successPct}%</span>
+        `;
+        card.appendChild(stats);
+
+        // Remaining/pace
+        const remaining = Math.max(0, totalDays - completed);
+        const weeksLeftCh = Math.max(1, Math.ceil(daysLeft / 7));
+        const pacePerWeek = remaining > 0 ? Math.ceil(remaining / weeksLeftCh) : 0;
+        const thisWeekOwed = Math.max(0, ch.freq - weekDone);
+        if (isActive && remaining > 0) {
+          const pace = document.createElement('div');
+          pace.className = 'habit-pace';
+          pace.innerHTML = `<strong>${remaining}</strong> remaining<br><span style="color:var(--terracotta);">Current debt: <strong>${thisWeekOwed}</strong> more this week</span>`;
+          card.appendChild(pace);
+        }
       }
 
       // Weight tracking (today)
