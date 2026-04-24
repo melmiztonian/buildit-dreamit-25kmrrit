@@ -5283,6 +5283,38 @@ function bbBeep(freq, dur) {
   } catch {}
 }
 
+// Sync BB session data to habit trackers (pull-ups + hip thrusts)
+function bbSyncToHabits(session) {
+  if (!session || !session.supersets) return;
+  const date = session.session_date;
+  const ws = getWeekStart(date);
+  const di = new Date(date + 'T12:00:00').getDay();
+
+  // Pull-ups: total unassisted reps
+  const totalPU = session.supersets.reduce((s, r) => s + (r.pullup_unassisted || 0), 0);
+  const puWeek = LS.get('habit_pullups_' + ws, Array(7).fill(0));
+  puWeek[di] = totalPU;
+  LS.set('habit_pullups_' + ws, puWeek);
+
+  // Hip thrusts: reps + pulses
+  const totalHT = session.supersets.reduce((s, r) => s + (r.ht_reps || 0) + (r.ht_pulses || 0), 0);
+  const htWeek = LS.get('habit_hipthrusts_' + ws, Array(7).fill(0));
+  htWeek[di] = totalHT;
+  LS.set('habit_hipthrusts_' + ws, htWeek);
+}
+
+// Clear habit tracker data for a deleted/removed session
+function bbClearHabits(date) {
+  const ws = getWeekStart(date);
+  const di = new Date(date + 'T12:00:00').getDay();
+  const puWeek = LS.get('habit_pullups_' + ws, Array(7).fill(0));
+  puWeek[di] = 0;
+  LS.set('habit_pullups_' + ws, puWeek);
+  const htWeek = LS.get('habit_hipthrusts_' + ws, Array(7).fill(0));
+  htWeek[di] = 0;
+  LS.set('habit_hipthrusts_' + ws, htWeek);
+}
+
 function bbGetToday() {
   if (!bbSessions) return null;
   return bbSessions.find(s => s.session_date === todayStr()) || null;
@@ -5363,6 +5395,55 @@ function renderBBWeek() {
     <span class="hs-badge year">${bdpType}: <strong>${bdpActual}</strong></span>
   `;
   c.appendChild(stats);
+
+  // Show Details pill for month calendar
+  if (!linkStatsOpen._bbMonth) linkStatsOpen._bbMonth = false;
+  const detailActions = document.createElement('div');
+  detailActions.className = 'habit-actions';
+  detailActions.style.marginTop = '8px';
+  const detailBtn = document.createElement('button');
+  detailBtn.className = 'habit-action-pill' + (linkStatsOpen._bbMonth ? ' active' : '');
+  detailBtn.textContent = linkStatsOpen._bbMonth ? 'Hide Details' : 'Show Details';
+  detailBtn.addEventListener('click', () => { linkStatsOpen._bbMonth = !linkStatsOpen._bbMonth; renderBBWeek(); });
+  detailActions.appendChild(detailBtn);
+  c.appendChild(detailActions);
+
+  if (linkStatsOpen._bbMonth) {
+    const now = new Date();
+    const yr = now.getFullYear(), mo = now.getMonth();
+    const calWrap = document.createElement('div');
+    calWrap.style.marginTop = '10px';
+    const calTitle = document.createElement('div');
+    calTitle.className = 'month-cal-title';
+    calTitle.textContent = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    calWrap.appendChild(calTitle);
+    const cal = document.createElement('div');
+    cal.className = 'month-cal-grid';
+    cal.style.cssText = 'max-width:320px;margin:0 auto;';
+    ['S','M','T','W','T','F','S'].forEach(d => {
+      const hd = document.createElement('div');
+      hd.className = 'month-cal-header';
+      hd.textContent = d;
+      cal.appendChild(hd);
+    });
+    const dim = new Date(yr, mo + 1, 0).getDate();
+    const firstDay = new Date(yr, mo, 1).getDay();
+    for (let b = 0; b < firstDay; b++) {
+      const blank = document.createElement('div');
+      blank.className = 'month-cal-cell empty';
+      cal.appendChild(blank);
+    }
+    for (let d = 1; d <= dim; d++) {
+      const ds = localDateStr(new Date(yr, mo, d));
+      const filled = sessionDates.has(ds);
+      const cell = document.createElement('div');
+      cell.className = 'month-cal-cell' + (filled ? ' filled' : '') + (ds === today ? ' today' : '');
+      cell.textContent = d;
+      cal.appendChild(cell);
+    }
+    calWrap.appendChild(cal);
+    c.appendChild(calWrap);
+  }
 }
 
 function renderBBTimer() {
@@ -5459,14 +5540,37 @@ function renderBBTimer() {
   });
 }
 
+let bbEditSession = null; // set to a session object to edit a past session
+
 function renderBBWorkout() {
   const c = $('bb-workout');
   if (!c) return;
   c.innerHTML = '';
   const today = todayStr();
-  let sess = bbGetToday();
-  const isNew = !sess;
+  let sess;
+  let editDate;
+  if (bbEditSession) {
+    sess = bbEditSession;
+    editDate = sess.session_date;
+  } else {
+    sess = bbGetToday();
+    editDate = today;
+  }
+  const isNew = !sess || !sess.id;
   if (!sess) sess = { session_date: today, supersets: Array(4).fill(null).map(() => ({ pullup_unassisted: 4, pullup_assisted: 4, ht_reps: 8, ht_pulses: 8, ht_hold: 8, ht_weight: 70 })), bdp_type: '6-count', bdp_target: 0, bdp_actual: 0, notes: '' };
+
+  // Title showing which date
+  if (bbEditSession) {
+    const editLabel = document.createElement('div');
+    editLabel.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;';
+    editLabel.innerHTML = '<span class="challenge-pill countdown">Editing: ' + editDate + '</span>';
+    const cancelEdit = document.createElement('button');
+    cancelEdit.className = 'habit-action-pill';
+    cancelEdit.textContent = 'Cancel';
+    cancelEdit.addEventListener('click', () => { bbEditSession = null; renderBBWorkout(); });
+    editLabel.appendChild(cancelEdit);
+    c.appendChild(editLabel);
+  }
 
   // Superset x4
   const ssTitle = document.createElement('div');
@@ -5609,7 +5713,7 @@ function renderBBWorkout() {
     }
     const bdpInputs = c.querySelector('.bb-bdp').querySelectorAll('input');
     const data = {
-      session_date: today,
+      session_date: editDate,
       supersets,
       bdp_type: $('bb-bdp-type').value,
       bdp_target: parseInt(bdpInputs[0].value) || 0,
@@ -5618,10 +5722,31 @@ function renderBBWorkout() {
     };
     if (!isNew && sess.id) data.id = sess.id;
     await bbSaveSession(data);
+    bbSyncToHabits(data);
+    bbEditSession = null;
     await bbFetchSessions();
     renderBB();
+    renderAllHabits();
   });
   c.appendChild(saveBtn);
+
+  // Delete button (if session exists)
+  if (!isNew && sess.id) {
+    const delBtn = document.createElement('button');
+    delBtn.className = 'habit-action-pill danger';
+    delBtn.style.cssText = 'display:block;margin-left:auto;margin-top:6px;';
+    delBtn.textContent = 'Delete this session';
+    delBtn.addEventListener('click', async () => {
+      if (!confirm('Delete session for ' + editDate + '?')) return;
+      bbClearHabits(editDate);
+      await bbDeleteSession(sess.id);
+      bbEditSession = null;
+      await bbFetchSessions();
+      renderBB();
+      renderAllHabits();
+    });
+    c.appendChild(delBtn);
+  }
 }
 
 function renderBBHistory() {
@@ -5652,11 +5777,23 @@ function renderBBHistory() {
       delBtn.style.fontSize = '0.65rem';
       delBtn.textContent = 'Del';
       delBtn.addEventListener('click', async () => {
-        if (!confirm('Delete this session?')) return;
+        if (!confirm('Delete session for ' + sess.session_date + '?')) return;
+        bbClearHabits(sess.session_date);
         await bbDeleteSession(sess.id);
         await bbFetchSessions();
         renderBB();
+        renderAllHabits();
       });
+      const editBtn = document.createElement('button');
+      editBtn.className = 'habit-action-pill';
+      editBtn.style.fontSize = '0.65rem';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => {
+        bbEditSession = { ...sess, supersets: sess.supersets.map(s => ({ ...s })) };
+        renderBBWorkout();
+        $('bb-workout').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      rowActions.appendChild(editBtn);
       rowActions.appendChild(delBtn);
       row.appendChild(rowActions);
       c.appendChild(row);
