@@ -4209,7 +4209,8 @@ async function renderFunnel() {
 
   // Horizontal lanes — each path is its own row
   const DEFAULT_LANES = [
-    { label: 'CP', stages: ['dm-link-cp', 'cp-page', 'cp-optin', 'tw-page', 'em-nurture', 'em-nurture-offer'] },
+    { label: 'CP \u2192 TW', stages: ['dm-link-cp', 'cp-page', 'cp-optin', 'tw-page'] },
+    { label: 'CP \u2192 Email', stages: ['dm-link-cp', 'cp-page', 'cp-optin', 'em-nurture', 'em-nurture-offer'] },
     { label: 'Beta', stages: ['dm-link-beta', 'beta-page', 'em-beta'] },
     { label: 'Hub', stages: ['dm-link-hub', 'hub-page'] },
   ];
@@ -4264,8 +4265,41 @@ async function renderFunnel() {
       });
       editBar.appendChild(showHiddenBtn);
     }
+    // Raw JSON editor
+    const jsonBtn = document.createElement('button');
+    jsonBtn.className = 'habit-action-pill';
+    jsonBtn.textContent = linkStatsOpen._funnelJson ? 'Hide JSON' : 'Edit JSON';
+    jsonBtn.addEventListener('click', () => { linkStatsOpen._funnelJson = !linkStatsOpen._funnelJson; renderFunnel(); });
+    editBar.appendChild(jsonBtn);
   }
   container.appendChild(editBar);
+
+  // JSON editor panel
+  if (editingFunnel && linkStatsOpen._funnelJson) {
+    const jsonPanel = document.createElement('div');
+    jsonPanel.style.cssText = 'margin-bottom:14px;';
+    const jsonArea = document.createElement('textarea');
+    jsonArea.style.cssText = 'width:100%;min-height:150px;border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:0.72rem;background:var(--card);color:var(--text);outline:none;resize:vertical;';
+    jsonArea.value = JSON.stringify(lanesData, null, 2);
+    jsonPanel.appendChild(jsonArea);
+    const jsonActions = document.createElement('div');
+    jsonActions.style.cssText = 'display:flex;gap:6px;margin-top:6px;justify-content:flex-end;';
+    const jsonSave = document.createElement('button');
+    jsonSave.className = 'habit-action-pill';
+    jsonSave.textContent = 'Apply';
+    jsonSave.addEventListener('click', () => {
+      try {
+        const parsed = JSON.parse(jsonArea.value);
+        if (!Array.isArray(parsed)) { alert('Must be an array of lanes'); return; }
+        LS.set('funnel_lanes', parsed);
+        linkStatsOpen._funnelJson = false;
+        renderFunnel();
+      } catch (e) { alert('Invalid JSON: ' + e.message); }
+    });
+    jsonActions.appendChild(jsonSave);
+    jsonPanel.appendChild(jsonActions);
+    container.appendChild(jsonPanel);
+  }
 
   const lanesEl = document.createElement('div');
   lanesEl.className = 'funnel-lanes';
