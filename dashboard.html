@@ -3342,8 +3342,8 @@ function renderChallenges() {
       `;
       card.appendChild(prog);
 
-      // Week grid
-      if (isActive || isDone) {
+      // Week grid (always show)
+      {
         const weekData = getChallengeWeekData(ch.id, weekStartStr);
         const weekGrid = document.createElement('div');
         weekGrid.className = 'habit-week-grid';
