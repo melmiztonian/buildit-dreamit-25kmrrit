@@ -2043,22 +2043,34 @@ body {
     <div id="bb-banner"></div>
   </div>
 
+  <!-- Weekly Tracker -->
+  <div class="card" data-card-id="bb-week" data-card-label="This Week">
+    <div class="card-title">This Week</div>
+    <div id="bb-week"></div>
+  </div>
+
+  <!-- Today's Workout -->
+  <div class="card" data-card-id="bb-workout" data-card-label="Today's Workout">
+    <div class="card-title">Today's Workout</div>
+    <div id="bb-workout"></div>
+  </div>
+
   <!-- BDP Timer -->
   <div class="card" data-card-id="bb-timer" data-card-label="BDP Timer">
     <div class="card-title">BDP Timer</div>
     <div id="bb-timer"></div>
   </div>
 
-  <!-- Workout Session Logger -->
-  <div class="card" data-card-id="bb-logger" data-card-label="Session Logger">
-    <div class="card-title">Workout Session Logger</div>
-    <div id="bb-logger"></div>
-  </div>
-
   <!-- Progress Graphs -->
   <div class="card" data-card-id="bb-progress" data-card-label="Progress">
     <div class="card-title">Progress</div>
     <div id="bb-progress"></div>
+  </div>
+
+  <!-- Session History -->
+  <div class="card" data-card-id="bb-history" data-card-label="Session History">
+    <div class="card-title">Session History</div>
+    <div id="bb-history"></div>
   </div>
 
   <div class="reorder-panel" data-tab="tab-bb"></div>
@@ -5271,6 +5283,11 @@ function bbBeep(freq, dur) {
   } catch {}
 }
 
+function bbGetToday() {
+  if (!bbSessions) return null;
+  return bbSessions.find(s => s.session_date === todayStr()) || null;
+}
+
 function renderBBBanner() {
   const c = $('bb-banner');
   if (!c) return;
@@ -5296,6 +5313,56 @@ function renderBBBanner() {
     <div class="progress-bar"><div class="progress-fill" style="width:${sessPct}%"></div></div>
     <div style="font-size:0.72rem;color:var(--muted);margin-top:8px;">${BB_START} \u2192 ${BB_END}</div>
   `;
+}
+
+function renderBBWeek() {
+  const c = $('bb-week');
+  if (!c || !bbSessions) return;
+  c.innerHTML = '';
+  const today = todayStr();
+  const weekStartStr = getWeekStart(today);
+  const weekStart = new Date(weekStartStr + 'T12:00:00');
+  const dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const sessionDates = new Set(bbSessions.map(s => s.session_date));
+
+  // Week grid like habit tracker
+  const grid = document.createElement('div');
+  grid.className = 'habit-week-grid';
+  dayLabels.forEach((d, di) => {
+    const dayDate = new Date(weekStart);
+    dayDate.setDate(dayDate.getDate() + di);
+    const ds = localDateStr(dayDate);
+    const done = sessionDates.has(ds);
+    const col = document.createElement('div');
+    col.className = 'habit-week-col';
+    col.innerHTML = `
+      <div class="hw-day">${d}</div>
+      <div class="hw-date">${dayDate.getDate()}</div>
+    `;
+    const chk = document.createElement('div');
+    chk.className = 'hw-check' + (done ? ' checked' : '');
+    col.appendChild(chk);
+    grid.appendChild(col);
+  });
+  c.appendChild(grid);
+
+  // Today's totals
+  const todaySess = bbGetToday();
+  const totalPU = todaySess && todaySess.supersets ? todaySess.supersets.reduce((s, r) => s + (r.pullup_unassisted || 0), 0) : 0;
+  const totalPA = todaySess && todaySess.supersets ? todaySess.supersets.reduce((s, r) => s + (r.pullup_assisted || 0), 0) : 0;
+  const totalHT = todaySess && todaySess.supersets ? todaySess.supersets.reduce((s, r) => s + (r.ht_reps || 0), 0) : 0;
+  const bdpActual = todaySess ? (todaySess.bdp_actual || 0) : 0;
+  const bdpType = todaySess ? (todaySess.bdp_type || '6-count') : '6-count';
+
+  const stats = document.createElement('div');
+  stats.className = 'habit-stats';
+  stats.style.marginTop = '10px';
+  stats.innerHTML = `
+    <span class="hs-badge week">Pull-ups: <strong>${totalPU}</strong> unassisted + <strong>${totalPA}</strong> assisted</span>
+    <span class="hs-badge month">Hip thrusts: <strong>${totalHT}</strong></span>
+    <span class="hs-badge year">${bdpType}: <strong>${bdpActual}</strong></span>
+  `;
+  c.appendChild(stats);
 }
 
 function renderBBTimer() {
@@ -5392,109 +5459,144 @@ function renderBBTimer() {
   });
 }
 
-let bbEditingSession = null;
-
-function renderBBLogger() {
-  const c = $('bb-logger');
+function renderBBWorkout() {
+  const c = $('bb-workout');
   if (!c) return;
   c.innerHTML = '';
+  const today = todayStr();
+  let sess = bbGetToday();
+  const isNew = !sess;
+  if (!sess) sess = { session_date: today, supersets: Array(4).fill(null).map(() => ({ pullup_unassisted: 4, pullup_assisted: 4, ht_reps: 8, ht_pulses: 8, ht_hold: 8, ht_weight: 70 })), bdp_type: '6-count', bdp_target: 0, bdp_actual: 0, notes: '' };
 
-  // New session button
-  const addBtn = document.createElement('button');
-  addBtn.className = 'todo-add-btn';
-  addBtn.style.marginBottom = '14px';
-  addBtn.textContent = '+ Log new session';
-  addBtn.addEventListener('click', () => {
-    bbEditingSession = bbEditingSession === 'new' ? null : 'new';
-    renderBBLogger();
-  });
-  c.appendChild(addBtn);
+  // Superset x4
+  const ssTitle = document.createElement('div');
+  ssTitle.style.cssText = 'font-size:0.85rem;font-weight:700;margin-bottom:10px;';
+  ssTitle.textContent = 'Superset x4';
+  c.appendChild(ssTitle);
 
-  // Session form (new or editing)
-  if (bbEditingSession) {
-    const isNew = bbEditingSession === 'new';
-    const sess = isNew ? { session_date: todayStr(), supersets: Array(4).fill(null).map(() => ({ pullup_unassisted: 4, pullup_assisted: 4, ht_reps: 8, ht_pulses: 8, ht_hold: 8, ht_weight: 70 })), bdp_type: '6-count', bdp_target: 0, bdp_actual: 0, notes: '' } : bbEditingSession;
+  const inp = (val, min) => `<input type="number" value="${val}" ${min ? 'min="'+min+'"' : ''} style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;text-align:center;">`;
 
-    const form = document.createElement('div');
-    form.className = 'challenge-card';
-    form.style.marginBottom = '14px';
-    form.innerHTML = `
-      <div style="font-size:0.82rem;font-weight:600;margin-bottom:10px;">${isNew ? 'New Session' : 'Edit Session'}</div>
-      <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Date</label>
-      <input type="date" value="${sess.session_date}" data-f="date" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;margin-bottom:10px;">
-      <div style="font-size:0.78rem;font-weight:600;color:var(--text);margin-bottom:6px;">Superset x4</div>
-      ${sess.supersets.map((s, i) => `
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;">
-          <div style="font-size:0.72rem;font-weight:600;color:var(--muted);margin-bottom:6px;">Round ${i + 1}</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-            <div><label style="font-size:0.65rem;color:var(--muted);">Pull-ups (unassisted)</label><input type="number" min="4" value="${s.pullup_unassisted}" data-f="pu-${i}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;text-align:center;"></div>
-            <div><label style="font-size:0.65rem;color:var(--muted);">Pull-ups (assisted)</label><div data-f="pa-${i}" style="font-size:0.82rem;text-align:center;padding:4px;color:var(--terracotta);font-weight:600;">${8 - s.pullup_unassisted}</div></div>
-            <div><label style="font-size:0.65rem;color:var(--muted);">HT reps</label><input type="number" value="${s.ht_reps}" data-f="hr-${i}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;text-align:center;"></div>
-            <div><label style="font-size:0.65rem;color:var(--muted);">HT pulses</label><input type="number" value="${s.ht_pulses}" data-f="hp-${i}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;text-align:center;"></div>
-            <div><label style="font-size:0.65rem;color:var(--muted);">HT hold (sec)</label><input type="number" value="${s.ht_hold}" data-f="hh-${i}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;text-align:center;"></div>
-            <div><label style="font-size:0.65rem;color:var(--muted);">HT weight (kg)</label><input type="number" value="${s.ht_weight}" data-f="hw-${i}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;text-align:center;"></div>
-          </div>
+  for (let i = 0; i < 4; i++) {
+    const s = sess.supersets[i];
+    const round = document.createElement('div');
+    round.style.cssText = 'background:var(--bg);border-radius:10px;padding:12px;margin-bottom:8px;';
+    round.innerHTML = `
+      <div style="font-size:0.75rem;font-weight:600;color:var(--terracotta);margin-bottom:8px;">Round ${i + 1}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+        <div>
+          <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">Pull-ups (unas.)</div>
+          ${inp(s.pullup_unassisted, 4)}
         </div>
-      `).join('')}
-      <div style="font-size:0.78rem;font-weight:600;color:var(--text);margin:10px 0 6px;">BDP</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">
-        <div><label style="font-size:0.65rem;color:var(--muted);">Type</label><select data-f="bdp-type" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;"><option value="6-count" ${sess.bdp_type === '6-count' ? 'selected' : ''}>6-count</option><option value="navy-seal" ${sess.bdp_type === 'navy-seal' ? 'selected' : ''}>Navy Seal</option></select></div>
-        <div><label style="font-size:0.65rem;color:var(--muted);">Target</label><input type="number" value="${sess.bdp_target}" data-f="bdp-target" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;text-align:center;"></div>
-        <div><label style="font-size:0.65rem;color:var(--muted);">Actual</label><input type="number" value="${sess.bdp_actual}" data-f="bdp-actual" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;text-align:center;"></div>
+        <div>
+          <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">Pull-ups (asst.)</div>
+          <div class="bb-pa" style="font-size:0.85rem;text-align:center;padding:5px;color:var(--terracotta);font-weight:600;background:var(--card);border-radius:6px;border:1px solid var(--border);">${8 - s.pullup_unassisted}</div>
+        </div>
+        <div>
+          <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">HT reps</div>
+          ${inp(s.ht_reps)}
+        </div>
+        <div>
+          <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">HT pulses</div>
+          ${inp(s.ht_pulses)}
+        </div>
+        <div>
+          <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">HT hold (sec)</div>
+          ${inp(s.ht_hold)}
+        </div>
+        <div>
+          <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">HT weight (kg)</div>
+          ${inp(s.ht_weight)}
+        </div>
       </div>
-      <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Notes</label>
-      <textarea data-f="notes" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;resize:vertical;min-height:40px;">${sess.notes || ''}</textarea>
     `;
-
-    // Auto-calc assisted pull-ups
-    for (let i = 0; i < 4; i++) {
-      const puInp = form.querySelector('[data-f="pu-' + i + '"]');
-      puInp.addEventListener('input', () => {
-        const val = Math.max(4, parseInt(puInp.value) || 4);
-        puInp.value = val;
-        form.querySelector('[data-f="pa-' + i + '"]').textContent = Math.max(0, 8 - val);
-      });
-    }
-
-    const formActions = document.createElement('div');
-    formActions.style.cssText = 'display:flex;gap:6px;margin-top:10px;justify-content:flex-end;';
-    const saveBtn = document.createElement('button');
-    saveBtn.className = 'habit-action-pill';
-    saveBtn.textContent = 'Save';
-    saveBtn.addEventListener('click', async () => {
-      const data = {
-        session_date: form.querySelector('[data-f="date"]').value,
-        supersets: Array(4).fill(null).map((_, i) => ({
-          pullup_unassisted: Math.max(4, parseInt(form.querySelector('[data-f="pu-' + i + '"]').value) || 4),
-          pullup_assisted: Math.max(0, 8 - Math.max(4, parseInt(form.querySelector('[data-f="pu-' + i + '"]').value) || 4)),
-          ht_reps: parseInt(form.querySelector('[data-f="hr-' + i + '"]').value) || 8,
-          ht_pulses: parseInt(form.querySelector('[data-f="hp-' + i + '"]').value) || 8,
-          ht_hold: parseInt(form.querySelector('[data-f="hh-' + i + '"]').value) || 8,
-          ht_weight: parseInt(form.querySelector('[data-f="hw-' + i + '"]').value) || 70
-        })),
-        bdp_type: form.querySelector('[data-f="bdp-type"]').value,
-        bdp_target: parseInt(form.querySelector('[data-f="bdp-target"]').value) || 0,
-        bdp_actual: parseInt(form.querySelector('[data-f="bdp-actual"]').value) || 0,
-        notes: form.querySelector('[data-f="notes"]').value.trim()
-      };
-      if (!isNew && sess.id) data.id = sess.id;
-      await bbSaveSession(data);
-      bbEditingSession = null;
-      await bbFetchSessions();
-      renderBB();
+    // Auto-calc assisted
+    const puInp = round.querySelectorAll('input')[0];
+    const paDiv = round.querySelector('.bb-pa');
+    puInp.addEventListener('input', () => {
+      const v = Math.max(4, parseInt(puInp.value) || 4);
+      puInp.value = v;
+      paDiv.textContent = Math.max(0, 8 - v);
     });
-    const cancelBtn = document.createElement('button');
-    cancelBtn.className = 'habit-action-pill';
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.addEventListener('click', () => { bbEditingSession = null; renderBBLogger(); });
-    formActions.appendChild(saveBtn);
-    formActions.appendChild(cancelBtn);
-    form.appendChild(formActions);
-    c.appendChild(form);
+    c.appendChild(round);
   }
 
-  // Session history
-  if (bbSessions && bbSessions.length) {
+  // BDP section
+  const bdpSection = document.createElement('div');
+  bdpSection.style.cssText = 'background:var(--bg);border-radius:10px;padding:12px;margin-bottom:8px;';
+  bdpSection.innerHTML = `
+    <div style="font-size:0.75rem;font-weight:600;color:var(--terracotta);margin-bottom:8px;">BDP</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+      <div>
+        <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">Type</div>
+        <select id="bb-bdp-type" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;">
+          <option value="6-count" ${sess.bdp_type === '6-count' ? 'selected' : ''}>6-count</option>
+          <option value="navy-seal" ${sess.bdp_type === 'navy-seal' ? 'selected' : ''}>Navy Seal</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">Target</div>
+        ${inp(sess.bdp_target)}
+      </div>
+      <div>
+        <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">Actual</div>
+        ${inp(sess.bdp_actual)}
+      </div>
+    </div>
+  `;
+  c.appendChild(bdpSection);
+
+  // Notes
+  const notesWrap = document.createElement('div');
+  notesWrap.style.marginBottom = '10px';
+  notesWrap.innerHTML = `
+    <div style="font-size:0.62rem;color:var(--muted);margin-bottom:2px;">Notes</div>
+    <textarea id="bb-notes" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;resize:vertical;min-height:40px;">${sess.notes || ''}</textarea>
+  `;
+  c.appendChild(notesWrap);
+
+  // Save button
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'habit-action-pill';
+  saveBtn.style.cssText = 'display:block;margin-left:auto;';
+  saveBtn.textContent = isNew ? 'Save session' : 'Update session';
+  saveBtn.addEventListener('click', async () => {
+    const rounds = c.querySelectorAll('[style*="background:var(--bg)"]');
+    const supersets = [];
+    for (let i = 0; i < 4; i++) {
+      const inputs = rounds[i].querySelectorAll('input');
+      const pu = Math.max(4, parseInt(inputs[0].value) || 4);
+      supersets.push({
+        pullup_unassisted: pu,
+        pullup_assisted: Math.max(0, 8 - pu),
+        ht_reps: parseInt(inputs[1].value) || 8,
+        ht_pulses: parseInt(inputs[2].value) || 8,
+        ht_hold: parseInt(inputs[3].value) || 8,
+        ht_weight: parseInt(inputs[4].value) || 70
+      });
+    }
+    const bdpInputs = rounds[4].querySelectorAll('input');
+    const data = {
+      session_date: today,
+      supersets,
+      bdp_type: $('bb-bdp-type').value,
+      bdp_target: parseInt(bdpInputs[0].value) || 0,
+      bdp_actual: parseInt(bdpInputs[1].value) || 0,
+      notes: $('bb-notes').value.trim()
+    };
+    if (!isNew && sess.id) data.id = sess.id;
+    await bbSaveSession(data);
+    await bbFetchSessions();
+    renderBB();
+  });
+  c.appendChild(saveBtn);
+}
+
+function renderBBHistory() {
+  const c = $('bb-history');
+  if (!c || !bbSessions) return;
+  c.innerHTML = '';
+
+  if (bbSessions.length) {
     bbSessions.forEach(sess => {
       const row = document.createElement('div');
       row.className = 'challenge-card';
@@ -5512,11 +5614,6 @@ function renderBBLogger() {
       `;
       const rowActions = document.createElement('div');
       rowActions.style.cssText = 'display:flex;gap:4px;margin-top:6px;justify-content:flex-end;';
-      const editBtn = document.createElement('button');
-      editBtn.className = 'habit-action-pill';
-      editBtn.style.fontSize = '0.65rem';
-      editBtn.textContent = 'Edit';
-      editBtn.addEventListener('click', () => { bbEditingSession = { ...sess, supersets: [...sess.supersets] }; renderBBLogger(); });
       const delBtn = document.createElement('button');
       delBtn.className = 'habit-action-pill danger';
       delBtn.style.fontSize = '0.65rem';
@@ -5527,13 +5624,12 @@ function renderBBLogger() {
         await bbFetchSessions();
         renderBB();
       });
-      rowActions.appendChild(editBtn);
       rowActions.appendChild(delBtn);
       row.appendChild(rowActions);
       c.appendChild(row);
     });
   } else {
-    c.innerHTML += '<div style="font-size:0.78rem;color:var(--muted);text-align:center;padding:10px;">No sessions yet.</div>';
+    c.innerHTML = '<div style="font-size:0.78rem;color:var(--muted);text-align:center;padding:10px;">No sessions yet.</div>';
   }
 }
 
@@ -5675,9 +5771,11 @@ function renderBBProgress() {
 
 function renderBB() {
   renderBBBanner();
+  renderBBWeek();
+  renderBBWorkout();
   renderBBTimer();
-  renderBBLogger();
   renderBBProgress();
+  renderBBHistory();
 }
 
 async function initBB() {
