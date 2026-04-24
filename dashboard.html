@@ -1802,6 +1802,51 @@ body {
   }
 }
 
+/* ======== SCROLL TO TOP ======== */
+.scroll-top-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--terracotta);
+  color: #fff;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+.scroll-top-btn:hover { opacity: 0.85; }
+
+/* ======== LINK TRACKER MOBILE ======== */
+@media (max-width: 768px) {
+  .link-tracker-table-header { display: none !important; }
+  .link-tracker-row {
+    grid-template-columns: 1fr !important;
+    gap: 4px !important;
+    padding: 10px !important;
+    border-bottom: 1px solid var(--border);
+  }
+  .link-tracker-row .lt-actions {
+    justify-content: flex-start !important;
+  }
+  .link-tracker-row .lt-meta {
+    display: flex !important;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .link-tracker-row .lt-actions {
+    flex-wrap: wrap;
+  }
+}
+
 /* ======== RESPONSIVE ======== */
 @media (max-width: 768px) {
   .global-header { padding: 24px 16px 0; }
@@ -2200,6 +2245,8 @@ body {
 </section>
 
 </div><!-- /main-content -->
+
+<button class="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">&uarr;</button>
 
 <script>
 /* ================================================================
@@ -4465,6 +4512,7 @@ async function renderLinkTracker() {
 
   // Table header with sort
   const tableHeader = document.createElement('div');
+  tableHeader.className = 'link-tracker-table-header';
   tableHeader.style.cssText = 'display:grid;grid-template-columns:2fr 50px 140px 45px 3fr;gap:8px;padding:6px 10px;font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;border-bottom:2px solid var(--border);margin-bottom:4px;';
   const mkSortHead = (label, key, align) => {
     const s = document.createElement('span');
@@ -4497,6 +4545,7 @@ async function renderLinkTracker() {
     const item = document.createElement('div');
     item.className = 'link-item';
     item.id = 'link-item-' + link.name;
+    item.className = 'link-item link-tracker-row';
     item.style.cssText = 'scroll-margin-top:60px;transition:box-shadow 0.3s;display:grid;grid-template-columns:2fr 50px 140px 45px 3fr;gap:8px;align-items:center;padding:10px;margin-bottom:2px;border-radius:8px;';
     const clickCount = uniqueCounts[link.name] || 0;
     const trackUrl = LINK_BASE + encodeURIComponent(link.name);
@@ -4508,27 +4557,34 @@ async function renderLinkTracker() {
     nameEl.innerHTML = '<div class="link-name" style="font-size:0.82rem;">' + link.name + '</div>';
     item.appendChild(nameEl);
 
+    // Meta wrapper (for mobile stacking)
+    const metaWrap = document.createElement('div');
+    metaWrap.className = 'lt-meta';
+    metaWrap.style.cssText = 'display:contents;';
+
     // Clicks
     const clicksEl = document.createElement('span');
     clicksEl.className = 'link-clicks-badge';
     clicksEl.textContent = clickCount;
-    item.appendChild(clicksEl);
+    metaWrap.appendChild(clicksEl);
 
     // Stage
     const stageEl = document.createElement('span');
     stageEl.className = 'hs-badge month';
     stageEl.style.cssText = 'font-size:0.6rem;padding:2px 6px;';
     stageEl.textContent = stageName;
-    item.appendChild(stageEl);
+    metaWrap.appendChild(stageEl);
 
     // Date
     const dateEl = document.createElement('span');
     dateEl.style.cssText = 'font-size:0.62rem;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums;';
     dateEl.textContent = link.created_at ? link.created_at.slice(5, 10) : '';
-    item.appendChild(dateEl);
+    metaWrap.appendChild(dateEl);
+    item.appendChild(metaWrap);
 
     // Actions
     const actions = document.createElement('div');
+    actions.className = 'lt-actions';
     actions.style.cssText = 'display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap;';
     const mkBtn = (label, cls, fn) => {
       const b = document.createElement('button');
