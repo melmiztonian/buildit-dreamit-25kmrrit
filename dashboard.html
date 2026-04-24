@@ -1883,6 +1883,7 @@ body {
   <button class="tab-btn" data-tab="tab-habits">Habit Tracker</button>
   <button class="tab-btn" data-tab="tab-challenges">Challenges</button>
   <button class="tab-btn" data-tab="tab-business">Building the Dream</button>
+  <button class="tab-btn" data-tab="tab-bb">Burpees & Booty</button>
   <button class="tab-btn" data-tab="tab-cal">Cal's Framework</button>
   <button class="tab-btn" data-tab="tab-library">Grounding Library</button>
 </nav>
@@ -2059,6 +2060,37 @@ body {
 
   <div class="reorder-panel" data-tab="tab-business"></div>
 
+</section>
+
+<!-- ==================== TAB: BURPEES & BOOTY ==================== -->
+<section id="tab-bb" class="tab-page">
+  <div class="mini-nav" data-mini-tab="tab-bb"></div>
+
+  <!-- 8-Week Challenge Banner -->
+  <div class="card" data-card-id="bb-banner" data-card-label="8-Week Challenge">
+    <div class="card-title">8-Week Challenge</div>
+    <div id="bb-banner"></div>
+  </div>
+
+  <!-- BDP Timer -->
+  <div class="card" data-card-id="bb-timer" data-card-label="BDP Timer">
+    <div class="card-title">BDP Timer</div>
+    <div id="bb-timer"></div>
+  </div>
+
+  <!-- Workout Session Logger -->
+  <div class="card" data-card-id="bb-logger" data-card-label="Session Logger">
+    <div class="card-title">Workout Session Logger</div>
+    <div id="bb-logger"></div>
+  </div>
+
+  <!-- Progress Graphs -->
+  <div class="card" data-card-id="bb-progress" data-card-label="Progress">
+    <div class="card-title">Progress</div>
+    <div id="bb-progress"></div>
+  </div>
+
+  <div class="reorder-panel" data-tab="tab-bb"></div>
 </section>
 
 <!-- ==================== TAB 4: CAL'S FRAMEWORK ==================== -->
@@ -2489,6 +2521,7 @@ function initTabs() {
       // Re-render all habits to sync both tabs
       if (btn.dataset.tab === 'tab-habits' || btn.dataset.tab === 'tab-dashboard' || btn.dataset.tab === 'tab-business') renderAllHabits();
       if (btn.dataset.tab === 'tab-business') { _cachedLinks = null; _cachedClicks = null; renderFunnel(); renderLinkTracker(); }
+      if (btn.dataset.tab === 'tab-bb') renderBB();
     });
   });
 }
@@ -5207,6 +5240,470 @@ function renderReorderPanels() {
   });
 }
 
+/* ================================================================
+   BURPEES & BOOTY
+   ================================================================ */
+const BB_START = '2026-04-27';
+const BB_END = '2026-06-22';
+const BB_TOTAL_SESSIONS = 32;
+const BB_SB = SB_URL + '/rest/v1/bb_sessions';
+const BB_HEADERS = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' };
+
+let bbSessions = null;
+let bbTimerInterval = null;
+let bbTimerSeconds = 1200;
+let bbTimerRunning = false;
+let bbTimerReps = 0;
+let bbTimerTarget = 0;
+let bbBeepsOn = true;
+let bbRestInterval = null;
+let bbRestSeconds = 60;
+
+async function bbFetchSessions() {
+  try {
+    const r = await fetch(BB_SB + '?select=*&order=session_date.desc', { headers: BB_HEADERS });
+    bbSessions = r.ok ? await r.json() : [];
+  } catch { bbSessions = []; }
+}
+
+async function bbSaveSession(session) {
+  if (session.id) {
+    await fetch(BB_SB + '?id=eq.' + session.id, { method: 'PATCH', headers: { ...BB_HEADERS, 'Prefer': 'return=minimal' }, body: JSON.stringify(session) }).catch(() => {});
+  } else {
+    await fetch(BB_SB, { method: 'POST', headers: { ...BB_HEADERS, 'Prefer': 'return=representation' }, body: JSON.stringify(session) }).then(r => r.json()).then(rows => { if (rows && rows[0]) session.id = rows[0].id; }).catch(() => {});
+  }
+}
+
+async function bbDeleteSession(id) {
+  await fetch(BB_SB + '?id=eq.' + id, { method: 'DELETE', headers: BB_HEADERS }).catch(() => {});
+}
+
+function bbBeep(freq, dur) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = freq || 800;
+    gain.gain.value = 0.3;
+    osc.start(); osc.stop(ctx.currentTime + (dur || 0.15));
+  } catch {}
+}
+
+function renderBBBanner() {
+  const c = $('bb-banner');
+  if (!c) return;
+  const today = new Date(todayStr() + 'T12:00:00');
+  const start = new Date(BB_START + 'T12:00:00');
+  const end = new Date(BB_END + 'T12:00:00');
+  const totalDays = Math.floor((end - start) / 86400000) + 1;
+  const elapsed = Math.max(0, Math.floor((today - start) / 86400000) + 1);
+  const daysLeft = Math.max(0, Math.floor((end - today) / 86400000) + 1);
+  const timePct = Math.min(100, Math.round((elapsed / totalDays) * 100));
+  const sessCount = bbSessions ? bbSessions.length : 0;
+  const sessPct = Math.min(100, Math.round((sessCount / BB_TOTAL_SESSIONS) * 100));
+
+  c.innerHTML = `
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;">
+      <div class="cd-stat"><span class="cd-num">${daysLeft}</span><span class="cd-label">days left</span></div>
+      <div class="cd-stat"><span class="cd-num">${sessCount}/${BB_TOTAL_SESSIONS}</span><span class="cd-label">sessions</span></div>
+      <div class="cd-stat"><span class="cd-num">${sessPct}%</span><span class="cd-label">complete</span></div>
+    </div>
+    <div style="font-size:0.72rem;color:var(--muted);margin-bottom:4px;">Time: ${timePct}%</div>
+    <div class="progress-bar" style="margin-bottom:8px;"><div class="progress-fill" style="width:${timePct}%"></div></div>
+    <div style="font-size:0.72rem;color:var(--muted);margin-bottom:4px;">Sessions: ${sessPct}%</div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${sessPct}%"></div></div>
+    <div style="font-size:0.72rem;color:var(--muted);margin-top:8px;">${BB_START} \u2192 ${BB_END}</div>
+  `;
+}
+
+function renderBBTimer() {
+  const c = $('bb-timer');
+  if (!c) return;
+  const mins = Math.floor(bbTimerSeconds / 60);
+  const secs = bbTimerSeconds % 60;
+  const restMins = Math.floor(bbRestSeconds / 60);
+  const restSecs = bbRestSeconds % 60;
+
+  c.innerHTML = `
+    <div style="margin-bottom:16px;">
+      <div style="font-size:0.82rem;font-weight:600;margin-bottom:8px;">BDP 20-Minute Timer</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
+        <label style="font-size:0.78rem;color:var(--muted);">Target reps:</label>
+        <input type="number" id="bb-timer-target" value="${bbTimerTarget || ''}" min="1" placeholder="0" style="width:60px;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;text-align:center;">
+        <label style="font-size:0.78rem;color:var(--muted);">Pacing beeps:</label>
+        <button class="habit-action-pill ${bbBeepsOn ? 'active' : ''}" id="bb-beep-toggle">${bbBeepsOn ? 'ON' : 'OFF'}</button>
+      </div>
+      <div style="text-align:center;margin:16px 0;">
+        <div style="font-size:3rem;font-weight:700;color:var(--terracotta);font-variant-numeric:tabular-nums;letter-spacing:2px;">${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}</div>
+        <div style="font-size:1.4rem;font-weight:600;color:var(--text);margin-top:4px;">Reps: ${bbTimerReps}</div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <button class="habit-action-pill" id="bb-timer-start">${bbTimerRunning ? 'Pause' : (bbTimerSeconds < 1200 ? 'Resume' : 'Start')}</button>
+        <button class="habit-action-pill" id="bb-timer-rep">+1 Rep</button>
+        <button class="habit-action-pill danger" id="bb-timer-reset">Reset</button>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:14px;">
+      <div style="font-size:0.82rem;font-weight:600;margin-bottom:8px;">Rest Timer</div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <label style="font-size:0.78rem;color:var(--muted);">Duration (sec):</label>
+        <input type="number" id="bb-rest-dur" value="60" min="10" style="width:60px;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;text-align:center;">
+        <div style="font-size:1.6rem;font-weight:700;color:var(--sage);font-variant-numeric:tabular-nums;" id="bb-rest-display">${String(restMins).padStart(2,'0')}:${String(restSecs).padStart(2,'0')}</div>
+        <button class="habit-action-pill" id="bb-rest-start">Start Rest</button>
+        <button class="habit-action-pill" id="bb-rest-reset">Reset</button>
+      </div>
+    </div>
+  `;
+
+  // Event listeners
+  $('bb-timer-target').addEventListener('change', (e) => { bbTimerTarget = parseInt(e.target.value) || 0; });
+  $('bb-beep-toggle').addEventListener('click', () => { bbBeepsOn = !bbBeepsOn; renderBBTimer(); });
+  $('bb-timer-start').addEventListener('click', () => {
+    bbTimerTarget = parseInt($('bb-timer-target').value) || bbTimerTarget;
+    if (bbTimerRunning) {
+      clearInterval(bbTimerInterval); bbTimerRunning = false;
+    } else {
+      if (bbTimerSeconds === 1200) { bbBeep(1000, 0.3); } // start beep
+      bbTimerRunning = true;
+      const interval = bbTimerTarget > 0 ? (1200 / bbTimerTarget) : 0;
+      let nextBeepAt = interval > 0 ? 1200 - interval : 0;
+      bbTimerInterval = setInterval(() => {
+        bbTimerSeconds--;
+        if (bbTimerSeconds <= 0) {
+          clearInterval(bbTimerInterval); bbTimerRunning = false; bbTimerSeconds = 0;
+          bbBeep(600, 0.5); setTimeout(() => bbBeep(600, 0.5), 200); setTimeout(() => bbBeep(600, 0.5), 400);
+        } else if (bbTimerSeconds === 60) {
+          bbBeep(500, 0.3); setTimeout(() => bbBeep(500, 0.3), 200); // 60s warning
+        } else if (bbBeepsOn && interval > 0 && bbTimerSeconds <= nextBeepAt) {
+          bbBeep(800, 0.1);
+          nextBeepAt -= interval;
+        }
+        renderBBTimer();
+      }, 1000);
+    }
+    renderBBTimer();
+  });
+  $('bb-timer-rep').addEventListener('click', () => { bbTimerReps++; renderBBTimer(); });
+  $('bb-timer-reset').addEventListener('click', () => {
+    clearInterval(bbTimerInterval); bbTimerRunning = false; bbTimerSeconds = 1200; bbTimerReps = 0; bbTimerTarget = 0;
+    renderBBTimer();
+  });
+  // Rest timer
+  $('bb-rest-start').addEventListener('click', () => {
+    if (bbRestInterval) { clearInterval(bbRestInterval); bbRestInterval = null; return; }
+    bbRestSeconds = parseInt($('bb-rest-dur').value) || 60;
+    bbRestInterval = setInterval(() => {
+      bbRestSeconds--;
+      const rm = Math.floor(bbRestSeconds / 60), rs = bbRestSeconds % 60;
+      $('bb-rest-display').textContent = String(rm).padStart(2,'0') + ':' + String(rs).padStart(2,'0');
+      if (bbRestSeconds <= 0) {
+        clearInterval(bbRestInterval); bbRestInterval = null;
+        bbBeep(1000, 0.3); setTimeout(() => bbBeep(1000, 0.3), 200);
+      }
+    }, 1000);
+  });
+  $('bb-rest-reset').addEventListener('click', () => {
+    clearInterval(bbRestInterval); bbRestInterval = null;
+    bbRestSeconds = parseInt($('bb-rest-dur').value) || 60;
+    const rm = Math.floor(bbRestSeconds / 60), rs = bbRestSeconds % 60;
+    $('bb-rest-display').textContent = String(rm).padStart(2,'0') + ':' + String(rs).padStart(2,'0');
+  });
+}
+
+let bbEditingSession = null;
+
+function renderBBLogger() {
+  const c = $('bb-logger');
+  if (!c) return;
+  c.innerHTML = '';
+
+  // New session button
+  const addBtn = document.createElement('button');
+  addBtn.className = 'todo-add-btn';
+  addBtn.style.marginBottom = '14px';
+  addBtn.textContent = '+ Log new session';
+  addBtn.addEventListener('click', () => {
+    bbEditingSession = bbEditingSession === 'new' ? null : 'new';
+    renderBBLogger();
+  });
+  c.appendChild(addBtn);
+
+  // Session form (new or editing)
+  if (bbEditingSession) {
+    const isNew = bbEditingSession === 'new';
+    const sess = isNew ? { session_date: todayStr(), supersets: Array(4).fill(null).map(() => ({ pullup_unassisted: 4, pullup_assisted: 4, ht_reps: 8, ht_pulses: 8, ht_hold: 8, ht_weight: 70 })), bdp_type: '6-count', bdp_target: 0, bdp_actual: 0, notes: '' } : bbEditingSession;
+
+    const form = document.createElement('div');
+    form.className = 'challenge-card';
+    form.style.marginBottom = '14px';
+    form.innerHTML = `
+      <div style="font-size:0.82rem;font-weight:600;margin-bottom:10px;">${isNew ? 'New Session' : 'Edit Session'}</div>
+      <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Date</label>
+      <input type="date" value="${sess.session_date}" data-f="date" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;margin-bottom:10px;">
+      <div style="font-size:0.78rem;font-weight:600;color:var(--text);margin-bottom:6px;">Superset x4</div>
+      ${sess.supersets.map((s, i) => `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;">
+          <div style="font-size:0.72rem;font-weight:600;color:var(--muted);margin-bottom:6px;">Round ${i + 1}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div><label style="font-size:0.65rem;color:var(--muted);">Pull-ups (unassisted)</label><input type="number" min="4" value="${s.pullup_unassisted}" data-f="pu-${i}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;text-align:center;"></div>
+            <div><label style="font-size:0.65rem;color:var(--muted);">Pull-ups (assisted)</label><div data-f="pa-${i}" style="font-size:0.82rem;text-align:center;padding:4px;color:var(--terracotta);font-weight:600;">${8 - s.pullup_unassisted}</div></div>
+            <div><label style="font-size:0.65rem;color:var(--muted);">HT reps</label><input type="number" value="${s.ht_reps}" data-f="hr-${i}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;text-align:center;"></div>
+            <div><label style="font-size:0.65rem;color:var(--muted);">HT pulses</label><input type="number" value="${s.ht_pulses}" data-f="hp-${i}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;text-align:center;"></div>
+            <div><label style="font-size:0.65rem;color:var(--muted);">HT hold (sec)</label><input type="number" value="${s.ht_hold}" data-f="hh-${i}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;text-align:center;"></div>
+            <div><label style="font-size:0.65rem;color:var(--muted);">HT weight (kg)</label><input type="number" value="${s.ht_weight}" data-f="hw-${i}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;text-align:center;"></div>
+          </div>
+        </div>
+      `).join('')}
+      <div style="font-size:0.78rem;font-weight:600;color:var(--text);margin:10px 0 6px;">BDP</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">
+        <div><label style="font-size:0.65rem;color:var(--muted);">Type</label><select data-f="bdp-type" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;"><option value="6-count" ${sess.bdp_type === '6-count' ? 'selected' : ''}>6-count</option><option value="navy-seal" ${sess.bdp_type === 'navy-seal' ? 'selected' : ''}>Navy Seal</option></select></div>
+        <div><label style="font-size:0.65rem;color:var(--muted);">Target</label><input type="number" value="${sess.bdp_target}" data-f="bdp-target" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;text-align:center;"></div>
+        <div><label style="font-size:0.65rem;color:var(--muted);">Actual</label><input type="number" value="${sess.bdp_actual}" data-f="bdp-actual" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.8rem;background:var(--bg);outline:none;text-align:center;"></div>
+      </div>
+      <label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:3px;">Notes</label>
+      <textarea data-f="notes" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;resize:vertical;min-height:40px;">${sess.notes || ''}</textarea>
+    `;
+
+    // Auto-calc assisted pull-ups
+    for (let i = 0; i < 4; i++) {
+      const puInp = form.querySelector('[data-f="pu-' + i + '"]');
+      puInp.addEventListener('input', () => {
+        const val = Math.max(4, parseInt(puInp.value) || 4);
+        puInp.value = val;
+        form.querySelector('[data-f="pa-' + i + '"]').textContent = Math.max(0, 8 - val);
+      });
+    }
+
+    const formActions = document.createElement('div');
+    formActions.style.cssText = 'display:flex;gap:6px;margin-top:10px;justify-content:flex-end;';
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'habit-action-pill';
+    saveBtn.textContent = 'Save';
+    saveBtn.addEventListener('click', async () => {
+      const data = {
+        session_date: form.querySelector('[data-f="date"]').value,
+        supersets: Array(4).fill(null).map((_, i) => ({
+          pullup_unassisted: Math.max(4, parseInt(form.querySelector('[data-f="pu-' + i + '"]').value) || 4),
+          pullup_assisted: Math.max(0, 8 - Math.max(4, parseInt(form.querySelector('[data-f="pu-' + i + '"]').value) || 4)),
+          ht_reps: parseInt(form.querySelector('[data-f="hr-' + i + '"]').value) || 8,
+          ht_pulses: parseInt(form.querySelector('[data-f="hp-' + i + '"]').value) || 8,
+          ht_hold: parseInt(form.querySelector('[data-f="hh-' + i + '"]').value) || 8,
+          ht_weight: parseInt(form.querySelector('[data-f="hw-' + i + '"]').value) || 70
+        })),
+        bdp_type: form.querySelector('[data-f="bdp-type"]').value,
+        bdp_target: parseInt(form.querySelector('[data-f="bdp-target"]').value) || 0,
+        bdp_actual: parseInt(form.querySelector('[data-f="bdp-actual"]').value) || 0,
+        notes: form.querySelector('[data-f="notes"]').value.trim()
+      };
+      if (!isNew && sess.id) data.id = sess.id;
+      await bbSaveSession(data);
+      bbEditingSession = null;
+      await bbFetchSessions();
+      renderBB();
+    });
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'habit-action-pill';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => { bbEditingSession = null; renderBBLogger(); });
+    formActions.appendChild(saveBtn);
+    formActions.appendChild(cancelBtn);
+    form.appendChild(formActions);
+    c.appendChild(form);
+  }
+
+  // Session history
+  if (bbSessions && bbSessions.length) {
+    bbSessions.forEach(sess => {
+      const row = document.createElement('div');
+      row.className = 'challenge-card';
+      row.style.marginBottom = '8px';
+      const avgPU = sess.supersets ? Math.round(sess.supersets.reduce((s, r) => s + (r.pullup_unassisted || 0), 0) / 4 * 10) / 10 : 0;
+      row.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+          <span style="font-weight:600;font-size:0.85rem;">${sess.session_date}</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <span class="challenge-pill score">PU avg: ${avgPU}</span>
+            <span class="challenge-pill ${sess.bdp_type === 'navy-seal' ? 'countdown' : 'freq'}">${sess.bdp_type}: ${sess.bdp_actual}/${sess.bdp_target}</span>
+          </div>
+        </div>
+        ${sess.notes ? '<div style="font-size:0.72rem;color:var(--muted);font-style:italic;margin-top:4px;">' + sess.notes + '</div>' : ''}
+      `;
+      const rowActions = document.createElement('div');
+      rowActions.style.cssText = 'display:flex;gap:4px;margin-top:6px;justify-content:flex-end;';
+      const editBtn = document.createElement('button');
+      editBtn.className = 'habit-action-pill';
+      editBtn.style.fontSize = '0.65rem';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => { bbEditingSession = { ...sess, supersets: [...sess.supersets] }; renderBBLogger(); });
+      const delBtn = document.createElement('button');
+      delBtn.className = 'habit-action-pill danger';
+      delBtn.style.fontSize = '0.65rem';
+      delBtn.textContent = 'Del';
+      delBtn.addEventListener('click', async () => {
+        if (!confirm('Delete this session?')) return;
+        await bbDeleteSession(sess.id);
+        await bbFetchSessions();
+        renderBB();
+      });
+      rowActions.appendChild(editBtn);
+      rowActions.appendChild(delBtn);
+      row.appendChild(rowActions);
+      c.appendChild(row);
+    });
+  } else {
+    c.innerHTML += '<div style="font-size:0.78rem;color:var(--muted);text-align:center;padding:10px;">No sessions yet.</div>';
+  }
+}
+
+function renderBBProgress() {
+  const c = $('bb-progress');
+  if (!c || !bbSessions) return;
+  c.innerHTML = '';
+  const sessions = [...bbSessions].sort((a, b) => a.session_date.localeCompare(b.session_date));
+  if (!sessions.length) { c.innerHTML = '<div style="font-size:0.78rem;color:var(--muted);text-align:center;">Log sessions to see progress.</div>'; return; }
+
+  // BDP reps over time
+  const sixCounts = sessions.filter(s => s.bdp_type === '6-count');
+  const navySeals = sessions.filter(s => s.bdp_type === 'navy-seal');
+
+  if (sixCounts.length || navySeals.length) {
+    const chartWrap = document.createElement('div');
+    chartWrap.className = 'weight-line-chart';
+    chartWrap.innerHTML = '<div class="weight-chart-title">BDP Reps Over Time</div>';
+    const canvas = document.createElement('canvas');
+    canvas.width = 600; canvas.height = 120;
+    chartWrap.appendChild(canvas);
+    c.appendChild(chartWrap);
+    setTimeout(() => {
+      const ctx = canvas.getContext('2d');
+      const w = canvas.offsetWidth, h = canvas.offsetHeight;
+      canvas.width = w * 2; canvas.height = h * 2; ctx.scale(2, 2);
+      const allVals = sessions.map(s => s.bdp_actual || 0);
+      const maxV = Math.max(1, ...allVals) + 2;
+      const padL = 30, padR = 10, padT = 10, padB = 20;
+      const plotW = w - padL - padR, plotH = h - padT - padB;
+      // Grid
+      ctx.strokeStyle = '#E0D6C8'; ctx.lineWidth = 0.5;
+      for (let g = 0; g <= 4; g++) {
+        const y = padT + (g / 4) * plotH;
+        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+        ctx.fillStyle = '#8B7B6B'; ctx.font = '9px DM Sans'; ctx.textAlign = 'right';
+        ctx.fillText(Math.round(maxV - (g / 4) * maxV), padL - 4, y + 3);
+      }
+      // 6-count line
+      if (sixCounts.length > 1) {
+        ctx.strokeStyle = '#C47A5A'; ctx.lineWidth = 2; ctx.beginPath();
+        sixCounts.forEach((s, i) => {
+          const x = padL + (i / (sixCounts.length - 1)) * plotW;
+          const y = padT + ((maxV - s.bdp_actual) / maxV) * plotH;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+      // Navy seal line
+      if (navySeals.length > 1) {
+        ctx.strokeStyle = '#A8B5A0'; ctx.lineWidth = 2; ctx.beginPath();
+        navySeals.forEach((s, i) => {
+          const x = padL + (i / (navySeals.length - 1)) * plotW;
+          const y = padT + ((maxV - s.bdp_actual) / maxV) * plotH;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+      // Legend
+      ctx.font = '8px DM Sans';
+      ctx.fillStyle = '#C47A5A'; ctx.fillText('6-count', padL, h - 4);
+      ctx.fillStyle = '#A8B5A0'; ctx.fillText('Navy Seal', padL + 50, h - 4);
+    }, 50);
+  }
+
+  // Pull-up avg over time
+  if (sessions.length > 1) {
+    const chartWrap2 = document.createElement('div');
+    chartWrap2.className = 'weight-line-chart';
+    chartWrap2.style.marginTop = '12px';
+    chartWrap2.innerHTML = '<div class="weight-chart-title">Pull-up Unassisted Avg Over Time</div>';
+    const canvas2 = document.createElement('canvas');
+    canvas2.width = 600; canvas2.height = 120;
+    chartWrap2.appendChild(canvas2);
+    c.appendChild(chartWrap2);
+    setTimeout(() => {
+      const ctx = canvas2.getContext('2d');
+      const w = canvas2.offsetWidth, h = canvas2.offsetHeight;
+      canvas2.width = w * 2; canvas2.height = h * 2; ctx.scale(2, 2);
+      const avgs = sessions.map(s => s.supersets ? Math.round(s.supersets.reduce((sum, r) => sum + (r.pullup_unassisted || 0), 0) / 4 * 10) / 10 : 0);
+      const maxV = Math.max(1, ...avgs) + 1;
+      const padL = 30, padR = 10, padT = 10, padB = 20;
+      const plotW = w - padL - padR, plotH = h - padT - padB;
+      ctx.strokeStyle = '#E0D6C8'; ctx.lineWidth = 0.5;
+      for (let g = 0; g <= 4; g++) {
+        const y = padT + (g / 4) * plotH;
+        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+        ctx.fillStyle = '#8B7B6B'; ctx.font = '9px DM Sans'; ctx.textAlign = 'right';
+        ctx.fillText((maxV - (g / 4) * maxV).toFixed(1), padL - 4, y + 3);
+      }
+      ctx.strokeStyle = '#C47A5A'; ctx.lineWidth = 2; ctx.beginPath();
+      avgs.forEach((v, i) => {
+        const x = padL + (i / (avgs.length - 1)) * plotW;
+        const y = padT + ((maxV - v) / maxV) * plotH;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      avgs.forEach((v, i) => {
+        const x = padL + (i / (avgs.length - 1)) * plotW;
+        const y = padT + ((maxV - v) / maxV) * plotH;
+        ctx.fillStyle = '#C47A5A'; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+      });
+    }, 50);
+  }
+
+  // Monthly calendar grid
+  const calWrap = document.createElement('div');
+  calWrap.style.cssText = 'margin-top:12px;';
+  calWrap.innerHTML = '<div style="font-size:0.82rem;font-weight:600;margin-bottom:8px;text-align:center;">Session Days</div>';
+  const now = new Date();
+  const cal = document.createElement('div');
+  cal.className = 'month-cal-grid';
+  cal.style.maxWidth = '320px'; cal.style.margin = '0 auto';
+  ['S','M','T','W','T','F','S'].forEach(d => {
+    const hd = document.createElement('div');
+    hd.className = 'month-cal-header';
+    hd.textContent = d;
+    cal.appendChild(hd);
+  });
+  const yr = now.getFullYear(), mo = now.getMonth();
+  const dim = new Date(yr, mo + 1, 0).getDate();
+  const firstDay = new Date(yr, mo, 1).getDay();
+  const sessionDates = new Set(sessions.map(s => s.session_date));
+  for (let b = 0; b < firstDay; b++) {
+    const blank = document.createElement('div');
+    blank.className = 'month-cal-cell empty';
+    cal.appendChild(blank);
+  }
+  for (let d = 1; d <= dim; d++) {
+    const ds = localDateStr(new Date(yr, mo, d));
+    const cell = document.createElement('div');
+    cell.className = 'month-cal-cell' + (sessionDates.has(ds) ? ' filled' : '') + (ds === todayStr() ? ' today' : '');
+    cell.textContent = d;
+    cal.appendChild(cell);
+  }
+  calWrap.appendChild(cal);
+  c.appendChild(calWrap);
+}
+
+function renderBB() {
+  renderBBBanner();
+  renderBBTimer();
+  renderBBLogger();
+  renderBBProgress();
+}
+
+async function initBB() {
+  await bbFetchSessions();
+  renderBB();
+}
+
 function initMiniNavs() {
   document.querySelectorAll('.mini-nav').forEach(nav => {
     const tabId = nav.dataset.miniTab;
@@ -5227,7 +5724,7 @@ function initMiniNavs() {
 }
 
 function initReorder() {
-  ['tab-dashboard', 'tab-habits', 'tab-challenges', 'tab-business', 'tab-cal', 'tab-library'].forEach(applyCardOrder);
+  ['tab-dashboard', 'tab-habits', 'tab-challenges', 'tab-business', 'tab-bb', 'tab-cal', 'tab-library'].forEach(applyCardOrder);
   renderReorderPanels();
 }
 
@@ -5240,6 +5737,7 @@ function init() {
   renderAllHabits();
   renderChallenges();
   renderTodos();
+  initBB();
   initMiniNavs();
   initReorder();
   renderFunnel();
