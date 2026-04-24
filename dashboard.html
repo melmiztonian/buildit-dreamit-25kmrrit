@@ -5479,6 +5479,7 @@ function renderBBWorkout() {
   for (let i = 0; i < 4; i++) {
     const s = sess.supersets[i];
     const round = document.createElement('div');
+    round.className = 'bb-round';
     round.style.cssText = 'background:var(--bg);border-radius:10px;padding:12px;margin-bottom:8px;';
     round.innerHTML = `
       <div style="font-size:0.75rem;font-weight:600;color:var(--terracotta);margin-bottom:8px;">Round ${i + 1}</div>
@@ -5522,6 +5523,7 @@ function renderBBWorkout() {
 
   // BDP section
   const bdpSection = document.createElement('div');
+  bdpSection.className = 'bb-bdp';
   bdpSection.style.cssText = 'background:var(--bg);border-radius:10px;padding:12px;margin-bottom:8px;';
   bdpSection.innerHTML = `
     <div style="font-size:0.75rem;font-weight:600;color:var(--terracotta);margin-bottom:8px;">BDP</div>
@@ -5560,7 +5562,7 @@ function renderBBWorkout() {
   saveBtn.style.cssText = 'display:block;margin-left:auto;';
   saveBtn.textContent = isNew ? 'Save session' : 'Update session';
   saveBtn.addEventListener('click', async () => {
-    const rounds = c.querySelectorAll('[style*="background:var(--bg)"]');
+    const rounds = c.querySelectorAll('.bb-round');
     const supersets = [];
     for (let i = 0; i < 4; i++) {
       const inputs = rounds[i].querySelectorAll('input');
@@ -5574,7 +5576,7 @@ function renderBBWorkout() {
         ht_weight: parseInt(inputs[4].value) || 70
       });
     }
-    const bdpInputs = rounds[4].querySelectorAll('input');
+    const bdpInputs = c.querySelector('.bb-bdp').querySelectorAll('input');
     const data = {
       session_date: today,
       supersets,
