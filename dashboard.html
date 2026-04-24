@@ -5534,6 +5534,89 @@ function renderBBTimer() {
     </div>
   `;
 
+  // Current level calculation
+  const BDP_LEVELS = [
+    { name: '1A \u2014 Entry', six: 1, navy: 1 },
+    { name: '1B', six: 50, navy: 20 },
+    { name: '1C', six: 100, navy: 40 },
+    { name: '1D', six: 150, navy: 60 },
+    { name: '2', six: 200, navy: 80 },
+    { name: '3', six: 250, navy: 100 },
+    { name: '4', six: 275, navy: 120 },
+    { name: 'Graduation', six: 325, navy: 150 },
+  ];
+  let bestSix = 0, bestNavy = 0;
+  if (bbSessions) {
+    bbSessions.forEach(s => {
+      if (s.bdp_type === '6-count' && (s.bdp_actual || 0) > bestSix) bestSix = s.bdp_actual;
+      if (s.bdp_type === 'navy-seal' && (s.bdp_actual || 0) > bestNavy) bestNavy = s.bdp_actual;
+    });
+  }
+  let currentLevel = null;
+  for (let i = BDP_LEVELS.length - 1; i >= 0; i--) {
+    if (bestSix >= BDP_LEVELS[i].six || bestNavy >= BDP_LEVELS[i].navy) {
+      currentLevel = BDP_LEVELS[i]; break;
+    }
+  }
+  let nextLevel = null;
+  if (currentLevel) {
+    const ci = BDP_LEVELS.indexOf(currentLevel);
+    if (ci < BDP_LEVELS.length - 1) nextLevel = BDP_LEVELS[ci + 1];
+  }
+
+  // Level display + toggle
+  const levelWrap = document.createElement('div');
+  levelWrap.style.cssText = 'margin-top:14px;border-top:1px solid var(--border);padding-top:12px;';
+  const levelRow = document.createElement('div');
+  levelRow.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;';
+  if (currentLevel) {
+    const lvlPill = document.createElement('span');
+    lvlPill.className = 'challenge-pill countdown';
+    lvlPill.style.fontSize = '0.78rem';
+    lvlPill.textContent = 'Level ' + currentLevel.name;
+    levelRow.appendChild(lvlPill);
+  }
+  if (nextLevel) {
+    const nxtPill = document.createElement('span');
+    nxtPill.className = 'challenge-pill score';
+    nxtPill.style.fontSize = '0.68rem';
+    nxtPill.textContent = 'Next: Level ' + nextLevel.name + ' (' + nextLevel.six + ' 6ct / ' + nextLevel.navy + ' NS)';
+    levelRow.appendChild(nxtPill);
+  }
+  if (bestSix > 0 || bestNavy > 0) {
+    const bestPill = document.createElement('span');
+    bestPill.className = 'challenge-pill done';
+    bestPill.style.fontSize = '0.65rem';
+    bestPill.textContent = 'PB: ' + bestSix + ' 6ct \u00B7 ' + bestNavy + ' NS';
+    levelRow.appendChild(bestPill);
+  }
+  const levelsBtn = document.createElement('button');
+  levelsBtn.className = 'habit-action-pill';
+  levelsBtn.style.fontSize = '0.65rem';
+  levelsBtn.textContent = linkStatsOpen._bdpLevels ? 'Hide Levels' : 'BDP Levels';
+  levelsBtn.addEventListener('click', () => { linkStatsOpen._bdpLevels = !linkStatsOpen._bdpLevels; renderBBTimer(); });
+  levelRow.appendChild(levelsBtn);
+  levelWrap.appendChild(levelRow);
+
+  if (linkStatsOpen._bdpLevels) {
+    const table = document.createElement('div');
+    table.style.cssText = 'margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;';
+    let html = '<div style="font-size:0.78rem;font-weight:600;margin-bottom:8px;">BDP Levels</div>';
+    BDP_LEVELS.forEach(lv => {
+      const isCurrent = currentLevel && lv.name === currentLevel.name;
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;' + (isCurrent ? 'font-weight:600;' : 'color:var(--muted);') + '">';
+      html += '<span class="challenge-pill ' + (isCurrent ? 'countdown' : 'score') + '" style="font-size:0.62rem;min-width:70px;text-align:center;">Level ' + lv.name + '</span>';
+      html += '<span style="font-size:0.68rem;">' + lv.six + ' six-counts</span>';
+      html += '<span style="font-size:0.62rem;color:var(--muted);">\u00B7</span>';
+      html += '<span style="font-size:0.68rem;">' + lv.navy + ' Navy Seals</span>';
+      html += '</div>';
+    });
+    table.innerHTML = html;
+    levelWrap.appendChild(table);
+  }
+
+  c.appendChild(levelWrap);
+
   // Event listeners
   $('bb-timer-target').addEventListener('change', (e) => { bbTimerTarget = parseInt(e.target.value) || 0; });
   $('bb-beep-toggle').addEventListener('click', () => { bbBeepsOn = !bbBeepsOn; renderBBTimer(); });
