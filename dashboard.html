@@ -2055,12 +2055,6 @@ body {
     <div id="bb-workout"></div>
   </div>
 
-  <!-- BDP Timer -->
-  <div class="card" data-card-id="bb-timer" data-card-label="BDP Timer">
-    <div class="card-title">BDP Timer</div>
-    <div id="bb-timer"></div>
-  </div>
-
   <!-- Progress Graphs -->
   <div class="card" data-card-id="bb-progress" data-card-label="Progress">
     <div class="card-title">Progress</div>
@@ -5625,32 +5619,64 @@ function renderBBWorkout() {
     // Rest timer between rounds (not after last)
     if (i < 3) {
       const rest = document.createElement('div');
-      rest.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:10px;padding:6px 0;margin-bottom:4px;';
-      const restDisplay = document.createElement('span');
-      restDisplay.style.cssText = 'font-size:1rem;font-weight:700;color:var(--sage);font-variant-numeric:tabular-nums;min-width:45px;text-align:center;';
+      rest.style.cssText = 'background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px;text-align:center;';
+      rest.innerHTML = `
+        <div style="font-size:0.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Rest</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px;">
+          <input type="number" class="bb-rest-input" value="60" min="10" style="width:50px;border:1px solid var(--border);border-radius:6px;padding:4px;font-family:inherit;font-size:0.82rem;background:var(--bg);outline:none;text-align:center;">
+          <span style="font-size:0.72rem;color:var(--muted);">sec</span>
+        </div>
+      `;
+      const restDisplay = document.createElement('div');
+      restDisplay.style.cssText = 'font-size:2.2rem;font-weight:700;color:var(--sage);font-variant-numeric:tabular-nums;margin-bottom:10px;';
       restDisplay.textContent = '1:00';
+      rest.appendChild(restDisplay);
       const restBtn = document.createElement('button');
       restBtn.className = 'habit-action-pill';
-      restBtn.style.fontSize = '0.65rem';
-      restBtn.textContent = 'Rest';
+      restBtn.textContent = 'Start Rest';
       let restInt = null;
       let restSec = 60;
+      const restInput = rest.querySelector('.bb-rest-input');
+      restInput.addEventListener('change', () => {
+        if (!restInt) {
+          restSec = parseInt(restInput.value) || 60;
+          restDisplay.textContent = Math.floor(restSec / 60) + ':' + String(restSec % 60).padStart(2, '0');
+        }
+      });
       restBtn.addEventListener('click', () => {
-        if (restInt) { clearInterval(restInt); restInt = null; restBtn.textContent = 'Rest'; restSec = 60; restDisplay.textContent = '1:00'; return; }
-        restSec = 60;
+        if (restInt) {
+          clearInterval(restInt); restInt = null;
+          restBtn.textContent = 'Start Rest';
+          restSec = parseInt(restInput.value) || 60;
+          restDisplay.textContent = Math.floor(restSec / 60) + ':' + String(restSec % 60).padStart(2, '0');
+          restDisplay.style.color = 'var(--sage)';
+          return;
+        }
+        restSec = parseInt(restInput.value) || 60;
         restBtn.textContent = 'Stop';
         restInt = setInterval(() => {
           restSec--;
           restDisplay.textContent = Math.floor(restSec / 60) + ':' + String(restSec % 60).padStart(2, '0');
+          // Last 5 seconds: tick beeps + red color
+          if (restSec <= 5 && restSec > 0) {
+            restDisplay.style.color = 'var(--terracotta)';
+            bbBeep(600, 0.08);
+          }
           if (restSec <= 0) {
             clearInterval(restInt); restInt = null;
-            restBtn.textContent = 'Rest';
+            restBtn.textContent = 'Start Rest';
             restDisplay.textContent = '0:00';
-            bbBeep(1000, 0.3); setTimeout(() => bbBeep(1000, 0.3), 200);
+            restDisplay.style.color = 'var(--terracotta)';
+            // Long beep
+            bbBeep(900, 0.5);
+            setTimeout(() => {
+              restSec = parseInt(restInput.value) || 60;
+              restDisplay.textContent = Math.floor(restSec / 60) + ':' + String(restSec % 60).padStart(2, '0');
+              restDisplay.style.color = 'var(--sage)';
+            }, 2000);
           }
         }, 1000);
       });
-      rest.appendChild(restDisplay);
       rest.appendChild(restBtn);
       c.appendChild(rest);
     }
