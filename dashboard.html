@@ -2055,6 +2055,12 @@ body {
     <div id="bb-workout"></div>
   </div>
 
+  <!-- BDP Timer -->
+  <div class="card" data-card-id="bb-timer" data-card-label="BDP Timer">
+    <div class="card-title">BDP Timer</div>
+    <div id="bb-timer"></div>
+  </div>
+
   <!-- Progress Graphs -->
   <div class="card" data-card-id="bb-progress" data-card-label="Progress">
     <div class="card-title">Progress</div>
@@ -5449,33 +5455,20 @@ function renderBBTimer() {
   const restSecs = bbRestSeconds % 60;
 
   c.innerHTML = `
-    <div style="margin-bottom:16px;">
-      <div style="font-size:0.82rem;font-weight:600;margin-bottom:8px;">BDP 20-Minute Timer</div>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
-        <label style="font-size:0.78rem;color:var(--muted);">Target reps:</label>
-        <input type="number" id="bb-timer-target" value="${bbTimerTarget || ''}" min="1" placeholder="0" style="width:60px;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;text-align:center;">
-        <label style="font-size:0.78rem;color:var(--muted);">Pacing beeps:</label>
-        <button class="habit-action-pill ${bbBeepsOn ? 'active' : ''}" id="bb-beep-toggle">${bbBeepsOn ? 'ON' : 'OFF'}</button>
-      </div>
-      <div style="text-align:center;margin:16px 0;">
-        <div style="font-size:3rem;font-weight:700;color:var(--terracotta);font-variant-numeric:tabular-nums;letter-spacing:2px;">${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}</div>
-        <div style="font-size:1.4rem;font-weight:600;color:var(--text);margin-top:4px;">Reps: ${bbTimerReps}</div>
-      </div>
-      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-        <button class="habit-action-pill" id="bb-timer-start">${bbTimerRunning ? 'Pause' : (bbTimerSeconds < 1200 ? 'Resume' : 'Start')}</button>
-        <button class="habit-action-pill" id="bb-timer-rep">+1 Rep</button>
-        <button class="habit-action-pill danger" id="bb-timer-reset">Reset</button>
-      </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
+      <label style="font-size:0.78rem;color:var(--muted);">Target reps:</label>
+      <input type="number" id="bb-timer-target" value="${bbTimerTarget || ''}" min="1" placeholder="0" style="width:60px;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;text-align:center;">
+      <label style="font-size:0.78rem;color:var(--muted);">Pacing beeps:</label>
+      <button class="habit-action-pill ${bbBeepsOn ? 'active' : ''}" id="bb-beep-toggle">${bbBeepsOn ? 'ON' : 'OFF'}</button>
     </div>
-    <div style="border-top:1px solid var(--border);padding-top:14px;">
-      <div style="font-size:0.82rem;font-weight:600;margin-bottom:8px;">Rest Timer</div>
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <label style="font-size:0.78rem;color:var(--muted);">Duration (sec):</label>
-        <input type="number" id="bb-rest-dur" value="60" min="10" style="width:60px;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;text-align:center;">
-        <div style="font-size:1.6rem;font-weight:700;color:var(--sage);font-variant-numeric:tabular-nums;" id="bb-rest-display">${String(restMins).padStart(2,'0')}:${String(restSecs).padStart(2,'0')}</div>
-        <button class="habit-action-pill" id="bb-rest-start">Start Rest</button>
-        <button class="habit-action-pill" id="bb-rest-reset">Reset</button>
-      </div>
+    <div style="text-align:center;margin:16px 0;">
+      <div style="font-size:3rem;font-weight:700;color:var(--terracotta);font-variant-numeric:tabular-nums;letter-spacing:2px;">${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}</div>
+      <div style="font-size:1.4rem;font-weight:600;color:var(--text);margin-top:4px;">Reps: ${bbTimerReps}</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+      <button class="habit-action-pill" id="bb-timer-start">${bbTimerRunning ? 'Pause' : (bbTimerSeconds < 1200 ? 'Resume' : 'Start')}</button>
+      <button class="habit-action-pill" id="bb-timer-rep">+1 Rep</button>
+      <button class="habit-action-pill danger" id="bb-timer-reset">Reset</button>
     </div>
   `;
 
@@ -5511,26 +5504,6 @@ function renderBBTimer() {
   $('bb-timer-reset').addEventListener('click', () => {
     clearInterval(bbTimerInterval); bbTimerRunning = false; bbTimerSeconds = 1200; bbTimerReps = 0; bbTimerTarget = 0;
     renderBBTimer();
-  });
-  // Rest timer
-  $('bb-rest-start').addEventListener('click', () => {
-    if (bbRestInterval) { clearInterval(bbRestInterval); bbRestInterval = null; return; }
-    bbRestSeconds = parseInt($('bb-rest-dur').value) || 60;
-    bbRestInterval = setInterval(() => {
-      bbRestSeconds--;
-      const rm = Math.floor(bbRestSeconds / 60), rs = bbRestSeconds % 60;
-      $('bb-rest-display').textContent = String(rm).padStart(2,'0') + ':' + String(rs).padStart(2,'0');
-      if (bbRestSeconds <= 0) {
-        clearInterval(bbRestInterval); bbRestInterval = null;
-        bbBeep(1000, 0.3); setTimeout(() => bbBeep(1000, 0.3), 200);
-      }
-    }, 1000);
-  });
-  $('bb-rest-reset').addEventListener('click', () => {
-    clearInterval(bbRestInterval); bbRestInterval = null;
-    bbRestSeconds = parseInt($('bb-rest-dur').value) || 60;
-    const rm = Math.floor(bbRestSeconds / 60), rs = bbRestSeconds % 60;
-    $('bb-rest-display').textContent = String(rm).padStart(2,'0') + ':' + String(rs).padStart(2,'0');
   });
 }
 
