@@ -3471,62 +3471,76 @@ function renderChallenges() {
 
           if (ui.showWeightChart && wDates.length >= 2) {
             const displayUnit = weightUnit === 'kg' ? 'kg' : 'lbs';
-            const displayVals = wDates.map(d => fromLbs(allWeights[d]));
             const chartWrap = document.createElement('div');
             chartWrap.className = 'weight-line-chart';
             chartWrap.innerHTML = '<div class="weight-chart-title">\uD83D\uDCC9 Weight Over Time (' + displayUnit + ')</div>';
             const canvas = document.createElement('canvas');
             canvas.width = 600;
-            canvas.height = 120;
+            canvas.height = 140;
             chartWrap.appendChild(canvas);
             card.appendChild(chartWrap);
-            // Draw line chart after DOM insertion
             setTimeout(() => {
               const ctx = canvas.getContext('2d');
               const w = canvas.offsetWidth;
               const h = canvas.offsetHeight;
               canvas.width = w * 2; canvas.height = h * 2;
               ctx.scale(2, 2);
-              const minW = Math.min(...displayVals) - 0.5;
-              const maxW = Math.max(...displayVals) + 0.5;
+
+              // Build continuous date range from first entry to today
+              const firstDate = new Date(wDates[0] + 'T12:00:00');
+              const lastDate = new Date(todayStr() + 'T12:00:00');
+              const allDays = [];
+              const d = new Date(firstDate);
+              while (d <= lastDate) { allDays.push(localDateStr(d)); d.setDate(d.getDate() + 1); }
+              if (!allDays.length) return;
+
+              const vals = allDays.map(dt => allWeights[dt] ? fromLbs(allWeights[dt]) : null);
+              const realVals = vals.filter(v => v !== null);
+              const minW = Math.min(...realVals) - 0.5;
+              const maxW = Math.max(...realVals) + 0.5;
               const range = maxW - minW || 1;
-              const padL = 36, padR = 10, padT = 10, padB = 20;
+              const padL = 36, padR = 10, padT = 10, padB = 24;
               const plotW = w - padL - padR;
               const plotH = h - padT - padB;
+
               // Grid lines
-              ctx.strokeStyle = '#E0D6C8';
-              ctx.lineWidth = 0.5;
+              ctx.strokeStyle = '#E0D6C8'; ctx.lineWidth = 0.5;
               for (let g = 0; g <= 4; g++) {
                 const y = padT + (g / 4) * plotH;
                 ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
-                ctx.fillStyle = '#8B7B6B';
-                ctx.font = '9px DM Sans';
-                ctx.textAlign = 'right';
-                const val = maxW - (g / 4) * range;
-                ctx.fillText(val.toFixed(1), padL - 4, y + 3);
+                ctx.fillStyle = '#8B7B6B'; ctx.font = '9px DM Sans'; ctx.textAlign = 'right';
+                ctx.fillText((maxW - (g / 4) * range).toFixed(1), padL - 4, y + 3);
               }
-              // Line
-              ctx.strokeStyle = '#C47A5A';
-              ctx.lineWidth = 2;
-              ctx.lineJoin = 'round';
+
+              // Line (connect only data points, skip gaps)
+              ctx.strokeStyle = '#C47A5A'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
               ctx.beginPath();
-              displayVals.forEach((v, i) => {
-                const x = padL + (i / Math.max(1, displayVals.length - 1)) * plotW;
-                const y = padT + ((maxW - v) / range) * plotH;
-                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+              let started = false;
+              allDays.forEach((dt, i) => {
+                if (vals[i] === null) return;
+                const x = padL + (i / Math.max(1, allDays.length - 1)) * plotW;
+                const y = padT + ((maxW - vals[i]) / range) * plotH;
+                if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, y); }
               });
               ctx.stroke();
-              // Dots + date labels
-              displayVals.forEach((v, i) => {
-                const x = padL + (i / Math.max(1, displayVals.length - 1)) * plotW;
-                const y = padT + ((maxW - v) / range) * plotH;
+
+              // Dots on data points
+              allDays.forEach((dt, i) => {
+                if (vals[i] === null) return;
+                const x = padL + (i / Math.max(1, allDays.length - 1)) * plotW;
+                const y = padT + ((maxW - vals[i]) / range) * plotH;
                 ctx.fillStyle = '#C47A5A';
                 ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
-                // Date label
-                ctx.fillStyle = '#8B7B6B';
-                ctx.font = '8px DM Sans';
-                ctx.textAlign = 'center';
-                ctx.fillText(wDates[i].slice(5), x, h - 4);
+              });
+
+              // Date labels on x-axis (show every few days to avoid crowding)
+              ctx.fillStyle = '#8B7B6B'; ctx.font = '7px DM Sans'; ctx.textAlign = 'center';
+              const labelEvery = Math.max(1, Math.ceil(allDays.length / 15));
+              allDays.forEach((dt, i) => {
+                if (i % labelEvery === 0 || i === allDays.length - 1) {
+                  const x = padL + (i / Math.max(1, allDays.length - 1)) * plotW;
+                  ctx.fillText(dt.slice(5), x, h - 4);
+                }
               });
             }, 50);
           } else if (ui.showWeightChart && wDates.length < 2) {
