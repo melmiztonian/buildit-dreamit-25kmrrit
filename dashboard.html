@@ -5747,29 +5747,60 @@ function renderBBWorkout() {
 
   const inp = (val, min) => `<input type="number" value="${val}" ${min ? 'min="'+min+'"' : ''} style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;text-align:center;">`;
 
+  // Helper to save current form data as a partial session
+  function bbSavePartial() {
+    const rounds = c.querySelectorAll('.bb-round');
+    const supersets = [];
+    for (let r = 0; r < rounds.length; r++) {
+      const inputs = rounds[r].querySelectorAll('input');
+      if (inputs.length < 5) continue;
+      const pu = Math.max(4, parseInt(inputs[4].value) || 4);
+      supersets.push({
+        pullup_unassisted: pu, pullup_assisted: Math.max(0, 8 - pu),
+        ht_reps: parseInt(inputs[0].value) || 8, ht_pulses: parseInt(inputs[1].value) || 8,
+        ht_hold: parseInt(inputs[2].value) || 8, ht_weight: parseInt(inputs[3].value) || 70
+      });
+    }
+    const bdpEl = c.querySelector('.bb-bdp');
+    const bdpInputs = bdpEl ? bdpEl.querySelectorAll('input') : [];
+    const data = {
+      session_date: editDate, supersets,
+      bdp_type: $('bb-bdp-type') ? $('bb-bdp-type').value : '6-count',
+      bdp_target: bdpInputs.length ? parseInt(bdpInputs[0].value) || 0 : 0,
+      bdp_actual: bdpInputs.length ? parseInt(bdpInputs[1].value) || 0 : 0,
+      notes: $('bb-notes') ? $('bb-notes').value.trim() : ''
+    };
+    if (!isNew && sess.id) data.id = sess.id;
+    bbSaveSession(data);
+    bbSyncToHabits(data);
+  }
+
   for (let i = 0; i < 3; i++) {
     const s = sess.supersets[i];
-    const setDone = LS.get('bb_set_done_' + today, [false,false,false]);
+    const setDone = LS.get('bb_set_done_' + editDate, { ht: [false,false,false], pu: [false,false,false] });
+    if (!setDone.ht) { setDone.ht = [false,false,false]; setDone.pu = [false,false,false]; }
     const round = document.createElement('div');
     round.className = 'bb-round';
     round.style.cssText = 'margin-bottom:4px;';
     round.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-size:0.75rem;font-weight:600;color:var(--terracotta);">Set ${i + 1}</span>
-        <div class="hw-check bb-set-check ${setDone[i] ? 'checked' : ''}" style="width:24px;height:24px;" data-set="${i}"></div>
-      </div>
+      <div style="font-size:0.75rem;font-weight:600;color:var(--terracotta);margin-bottom:8px;">Set ${i + 1}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div style="background:var(--bg);border-radius:10px;padding:10px;">
-          <div style="font-size:0.68rem;font-weight:600;color:var(--text);margin-bottom:6px;">Hip Thrusts</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:0.68rem;font-weight:600;color:var(--text);">Hip Thrusts</span>
+          </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
             <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Reps</div>${inp(s.ht_reps)}</div>
             <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Pulses</div>${inp(s.ht_pulses)}</div>
             <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Hold (sec)</div>${inp(s.ht_hold)}</div>
             <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Weight (kg)</div>${inp(s.ht_weight)}</div>
           </div>
+          <button class="habit-action-pill bb-done-ht ${setDone.ht[i] ? 'active' : ''}" style="margin-top:8px;width:100%;font-size:0.72rem;">${setDone.ht[i] ? '\u2713 Done' : 'Done'}</button>
         </div>
         <div style="background:var(--bg);border-radius:10px;padding:10px;">
-          <div style="font-size:0.68rem;font-weight:600;color:var(--text);margin-bottom:6px;">Pull-ups</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:0.68rem;font-weight:600;color:var(--text);">Pull-ups</span>
+          </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
             <div>
               <div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Unassisted</div>
@@ -5780,22 +5811,33 @@ function renderBBWorkout() {
               <div class="bb-pa" style="font-size:0.85rem;text-align:center;padding:5px;color:var(--terracotta);font-weight:600;background:var(--card);border-radius:6px;border:1px solid var(--border);">${8 - s.pullup_unassisted}</div>
             </div>
           </div>
+          <button class="habit-action-pill bb-done-pu ${setDone.pu[i] ? 'active' : ''}" style="margin-top:8px;width:100%;font-size:0.72rem;">${setDone.pu[i] ? '\u2713 Done' : 'Done'}</button>
         </div>
       </div>
     `;
     // Auto-calc assisted
-    const puInp = round.querySelectorAll('input')[4]; // 5th input (after 4 HT inputs)
+    const puInp = round.querySelectorAll('input')[4];
     const paDiv = round.querySelector('.bb-pa');
     puInp.addEventListener('input', () => {
       const v = Math.max(4, parseInt(puInp.value) || 4);
       puInp.value = v;
       paDiv.textContent = Math.max(0, 8 - v);
     });
-    // Set checkmark
-    round.querySelector('.bb-set-check').addEventListener('click', () => {
-      const sd = LS.get('bb_set_done_' + today, [false,false,false]);
-      sd[i] = !sd[i];
-      LS.set('bb_set_done_' + today, sd);
+    // Done pills
+    round.querySelector('.bb-done-ht').addEventListener('click', () => {
+      const sd = LS.get('bb_set_done_' + editDate, { ht: [false,false,false], pu: [false,false,false] });
+      if (!sd.ht) { sd.ht = [false,false,false]; sd.pu = [false,false,false]; }
+      sd.ht[i] = !sd.ht[i];
+      LS.set('bb_set_done_' + editDate, sd);
+      bbSavePartial();
+      renderBBWorkout();
+    });
+    round.querySelector('.bb-done-pu').addEventListener('click', () => {
+      const sd = LS.get('bb_set_done_' + editDate, { ht: [false,false,false], pu: [false,false,false] });
+      if (!sd.ht) { sd.ht = [false,false,false]; sd.pu = [false,false,false]; }
+      sd.pu[i] = !sd.pu[i];
+      LS.set('bb_set_done_' + editDate, sd);
+      bbSavePartial();
       renderBBWorkout();
     });
     c.appendChild(round);
