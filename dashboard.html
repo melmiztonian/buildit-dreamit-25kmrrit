@@ -6075,15 +6075,74 @@ function renderBBHistory() {
       const editBtn = document.createElement('button');
       editBtn.className = 'habit-action-pill';
       editBtn.style.fontSize = '0.65rem';
-      editBtn.textContent = 'Edit';
+      editBtn.textContent = challengeUIState['bb_edit_' + sess.id] ? 'Close' : 'Edit';
       editBtn.addEventListener('click', () => {
-        bbEditSession = { ...sess, supersets: sess.supersets.map(s => ({ ...s })) };
-        renderBBWorkout();
-        $('bb-workout').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        challengeUIState['bb_edit_' + sess.id] = !challengeUIState['bb_edit_' + sess.id];
+        renderBBHistory();
       });
       rowActions.appendChild(editBtn);
       rowActions.appendChild(delBtn);
       row.appendChild(rowActions);
+
+      // Inline edit form
+      if (challengeUIState['bb_edit_' + sess.id]) {
+        const ef = document.createElement('div');
+        ef.style.cssText = 'margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;';
+        const ss = sess.supersets || [];
+        let efHtml = '<div style="font-size:0.78rem;font-weight:600;margin-bottom:8px;">Edit Session \u2014 ' + sess.session_date + '</div>';
+        for (let si = 0; si < ss.length; si++) {
+          const s = ss[si];
+          efHtml += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;background:var(--bg);border-radius:8px;padding:8px;">
+            <div style="font-size:0.65rem;font-weight:600;color:var(--terracotta);grid-column:1/-1;">Set ${si+1}</div>
+            <div><span style="font-size:0.6rem;color:var(--muted);">HT Reps</span><input type="number" value="${s.ht_reps||8}" data-f="hr${si}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-size:0.8rem;text-align:center;background:var(--card);outline:none;"></div>
+            <div><span style="font-size:0.6rem;color:var(--muted);">HT Pulses</span><input type="number" value="${s.ht_pulses||8}" data-f="hp${si}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-size:0.8rem;text-align:center;background:var(--card);outline:none;"></div>
+            <div><span style="font-size:0.6rem;color:var(--muted);">HT Hold</span><input type="number" value="${s.ht_hold||8}" data-f="hh${si}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-size:0.8rem;text-align:center;background:var(--card);outline:none;"></div>
+            <div><span style="font-size:0.6rem;color:var(--muted);">HT Weight</span><input type="number" value="${s.ht_weight||70}" data-f="hw${si}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-size:0.8rem;text-align:center;background:var(--card);outline:none;"></div>
+            <div><span style="font-size:0.6rem;color:var(--muted);">PU Unas.</span><input type="number" min="4" value="${s.pullup_unassisted||4}" data-f="pu${si}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-size:0.8rem;text-align:center;background:var(--card);outline:none;"></div>
+            <div><span style="font-size:0.6rem;color:var(--muted);">PU Asst.</span><div style="padding:4px;text-align:center;color:var(--terracotta);font-weight:600;">${8-(s.pullup_unassisted||4)}</div></div>
+          </div>`;
+        }
+        efHtml += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">
+          <div><span style="font-size:0.6rem;color:var(--muted);">BDP Type</span><select data-f="btype" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-size:0.8rem;background:var(--card);outline:none;"><option value="6-count" ${sess.bdp_type==='6-count'?'selected':''}>6-count</option><option value="navy-seal" ${sess.bdp_type==='navy-seal'?'selected':''}>Navy Seal</option></select></div>
+          <div><span style="font-size:0.6rem;color:var(--muted);">Target</span><input type="number" value="${sess.bdp_target||0}" data-f="btarget" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-size:0.8rem;text-align:center;background:var(--card);outline:none;"></div>
+          <div><span style="font-size:0.6rem;color:var(--muted);">Actual</span><input type="number" value="${sess.bdp_actual||0}" data-f="bactual" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:4px;font-size:0.8rem;text-align:center;background:var(--card);outline:none;"></div>
+        </div>`;
+        efHtml += `<div><span style="font-size:0.6rem;color:var(--muted);">Notes</span><textarea data-f="notes" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px;font-size:0.8rem;background:var(--card);outline:none;resize:vertical;min-height:30px;">${sess.notes||''}</textarea></div>`;
+        ef.innerHTML = efHtml;
+        const saveEditBtn = document.createElement('button');
+        saveEditBtn.className = 'habit-action-pill';
+        saveEditBtn.style.cssText = 'margin-top:8px;display:block;margin-left:auto;';
+        saveEditBtn.textContent = 'Save';
+        saveEditBtn.addEventListener('click', async () => {
+          const supersets = [];
+          for (let si = 0; si < ss.length; si++) {
+            const pu = Math.max(4, parseInt(ef.querySelector('[data-f="pu'+si+'"]').value)||4);
+            supersets.push({
+              pullup_unassisted: pu, pullup_assisted: Math.max(0,8-pu),
+              ht_reps: parseInt(ef.querySelector('[data-f="hr'+si+'"]').value)||8,
+              ht_pulses: parseInt(ef.querySelector('[data-f="hp'+si+'"]').value)||8,
+              ht_hold: parseInt(ef.querySelector('[data-f="hh'+si+'"]').value)||8,
+              ht_weight: parseInt(ef.querySelector('[data-f="hw'+si+'"]').value)||70
+            });
+          }
+          const data = {
+            id: sess.id, session_date: sess.session_date, supersets,
+            bdp_type: ef.querySelector('[data-f="btype"]').value,
+            bdp_target: parseInt(ef.querySelector('[data-f="btarget"]').value)||0,
+            bdp_actual: parseInt(ef.querySelector('[data-f="bactual"]').value)||0,
+            notes: ef.querySelector('[data-f="notes"]').value.trim()
+          };
+          await bbSaveSession(data);
+          bbSyncToHabits(data);
+          challengeUIState['bb_edit_' + sess.id] = false;
+          await bbFetchSessions();
+          renderBB();
+          renderAllHabits();
+        });
+        ef.appendChild(saveEditBtn);
+        row.appendChild(ef);
+      }
+
       c.appendChild(row);
     });
   } else {
