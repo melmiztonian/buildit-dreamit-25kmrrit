@@ -5319,7 +5319,7 @@ const BB_HEADERS = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Con
 
 let bbSessions = null;
 let bbTimerInterval = null;
-let bbTimerSeconds = 1200;
+let bbTimerMs = 1200000; // 20 min in ms
 let bbTimerRunning = false;
 let bbTimerReps = 0;
 let bbTimerTarget = 0;
@@ -5535,20 +5535,18 @@ function renderBBWeek() {
 function renderBBTimer() {
   const c = $('bb-timer');
   if (!c) return;
-  const mins = Math.floor(bbTimerSeconds / 60);
-  const secs = bbTimerSeconds % 60;
-  const restMins = Math.floor(bbRestSeconds / 60);
-  const restSecs = bbRestSeconds % 60;
+  const totalSec = Math.floor(bbTimerMs / 1000);
+  const mins = Math.floor(totalSec / 60);
+  const secs = totalSec % 60;
+  const cs = Math.floor((bbTimerMs % 1000) / 10);
 
   // Pacing calculations
-  const elapsed = 1200 - bbTimerSeconds;
-  const interval = bbTimerTarget > 0 ? (1200 / bbTimerTarget) : 0;
-  const expectedReps = interval > 0 ? Math.floor(elapsed / interval) : 0;
-  const repDiff = bbTimerReps - expectedReps;
-  const secUntilNextRep = interval > 0 ? Math.max(0, Math.ceil(interval - (elapsed % interval))) : 0;
-  const paceStatus = repDiff >= 0 ? 'ahead' : 'behind';
-  const paceColor = repDiff >= 0 ? 'var(--sage)' : 'var(--terracotta)';
-  const overallPct = Math.min(100, Math.round((elapsed / 1200) * 100));
+  const elapsedMs = 1200000 - bbTimerMs;
+  const elapsedSec = elapsedMs / 1000;
+  const intervalSec = bbTimerTarget > 0 ? (1200 / bbTimerTarget) : 0;
+  const secUntilNextRep = intervalSec > 0 ? Math.max(0, (intervalSec - (elapsedSec % intervalSec))) : 0;
+  const paceColor = secUntilNextRep > intervalSec * 0.5 ? 'var(--sage)' : 'var(--terracotta)';
+  const overallPct = Math.min(100, Math.round((elapsedMs / 1200000) * 100));
 
   c.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
@@ -5558,11 +5556,11 @@ function renderBBTimer() {
       <button class="habit-action-pill ${bbBeepsOn ? 'active' : ''}" id="bb-beep-toggle">${bbBeepsOn ? 'ON' : 'OFF'}</button>
     </div>
     <div style="text-align:center;margin:16px 0;">
-      <div style="font-size:3rem;font-weight:700;color:var(--terracotta);font-variant-numeric:tabular-nums;letter-spacing:2px;">${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}</div>
+      <div style="font-size:3rem;font-weight:700;color:var(--terracotta);font-variant-numeric:tabular-nums;letter-spacing:2px;">${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}<span style="font-size:1.4rem;color:var(--sand);">.${String(cs).padStart(2,'0')}</span></div>
       <div style="font-size:1.4rem;font-weight:600;color:var(--text);margin-top:4px;">Reps: ${bbTimerReps}</div>
       ${bbTimerRunning && bbTimerTarget > 0 ? `
         <div style="margin-top:12px;">
-          <div style="font-size:1.8rem;font-weight:700;color:${paceColor};font-variant-numeric:tabular-nums;">${secUntilNextRep}s</div>
+          <div style="font-size:1.8rem;font-weight:700;color:${paceColor};font-variant-numeric:tabular-nums;">${secUntilNextRep.toFixed(1)}s</div>
           <div style="font-size:0.7rem;color:var(--muted);">until next rep</div>
         </div>
       ` : ''}
@@ -5578,7 +5576,7 @@ function renderBBTimer() {
       </div>
     ` : ''}
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-      <button class="habit-action-pill" id="bb-timer-start">${bbTimerRunning ? 'Pause' : (bbTimerSeconds < 1200 ? 'Resume' : 'Start')}</button>
+      <button class="habit-action-pill" id="bb-timer-start">${bbTimerRunning ? 'Pause' : (bbTimerMs < 1200000 ? 'Resume' : 'Start')}</button>
       <button class="habit-action-pill" id="bb-timer-rep">+1 Rep</button>
       <button class="habit-action-pill danger" id="bb-timer-reset">Reset</button>
     </div>
@@ -5675,31 +5673,38 @@ function renderBBTimer() {
     if (bbTimerRunning) {
       clearInterval(bbTimerInterval); bbTimerRunning = false;
     } else {
-      if (bbTimerSeconds === 1200) { bbBeep(1000, 0.3); } // start beep
+      if (bbTimerMs === 1200000) { bbBeep(1000, 0.3); } // start beep
       bbTimerRunning = true;
-      const interval = bbTimerTarget > 0 ? (1200 / bbTimerTarget) : 0;
-      let nextBeepAt = interval > 0 ? 1200 - interval : 0;
+      const intervalSec = bbTimerTarget > 0 ? (1200 / bbTimerTarget) : 0;
+      let nextBeepAtMs = intervalSec > 0 ? 1200000 - intervalSec * 1000 : 0;
+      let lastSecond = Math.floor(bbTimerMs / 1000);
       bbTimerInterval = setInterval(() => {
-        bbTimerSeconds--;
-        if (bbTimerSeconds <= 0) {
-          clearInterval(bbTimerInterval); bbTimerRunning = false; bbTimerSeconds = 0;
-          bbBeep(600, 0.5); setTimeout(() => bbBeep(600, 0.5), 200); setTimeout(() => bbBeep(600, 0.5), 400);
-        } else if (bbTimerSeconds === 60) {
-          bbBeep(500, 0.3); setTimeout(() => bbBeep(500, 0.3), 200); // 60s warning
-        } else if (bbTimerSeconds > 60 && bbTimerSeconds % 60 === 0) {
-          bbBeep(400, 0.15); // minute beep
-        } else if (bbBeepsOn && interval > 0 && bbTimerSeconds <= nextBeepAt) {
-          bbBeep(800, 0.1);
-          nextBeepAt -= interval;
+        bbTimerMs -= 100;
+        const curSecond = Math.floor(bbTimerMs / 1000);
+        // Only fire beeps on second boundaries
+        if (curSecond !== lastSecond) {
+          lastSecond = curSecond;
+          if (bbTimerMs <= 0) {
+            clearInterval(bbTimerInterval); bbTimerRunning = false; bbTimerMs = 0;
+            bbBeep(600, 0.5); setTimeout(() => bbBeep(600, 0.5), 200); setTimeout(() => bbBeep(600, 0.5), 400);
+          } else if (curSecond === 60) {
+            bbBeep(500, 0.3); setTimeout(() => bbBeep(500, 0.3), 200);
+          } else if (curSecond > 60 && curSecond % 60 === 0) {
+            bbBeep(400, 0.15);
+          }
+          if (bbBeepsOn && intervalSec > 0 && bbTimerMs <= nextBeepAtMs) {
+            bbBeep(800, 0.1);
+            nextBeepAtMs -= intervalSec * 1000;
+          }
         }
         renderBBTimer();
-      }, 1000);
+      }, 100);
     }
     renderBBTimer();
   });
   $('bb-timer-rep').addEventListener('click', () => { bbTimerReps++; renderBBTimer(); });
   $('bb-timer-reset').addEventListener('click', () => {
-    clearInterval(bbTimerInterval); bbTimerRunning = false; bbTimerSeconds = 1200; bbTimerReps = 0; bbTimerTarget = 0;
+    clearInterval(bbTimerInterval); bbTimerRunning = false; bbTimerMs = 1200000; bbTimerReps = 0; bbTimerTarget = 0;
     renderBBTimer();
   });
 }
@@ -5748,7 +5753,7 @@ function renderBBWorkout() {
   const inp = (val, min) => `<input type="number" value="${val}" ${min ? 'min="'+min+'"' : ''} style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;text-align:center;">`;
 
   // Helper to save current form data as a partial session
-  function bbSavePartial() {
+  async function bbSavePartial() {
     const rounds = c.querySelectorAll('.bb-round');
     const supersets = [];
     for (let r = 0; r < rounds.length; r++) {
@@ -5771,8 +5776,9 @@ function renderBBWorkout() {
       notes: $('bb-notes') ? $('bb-notes').value.trim() : ''
     };
     if (!isNew && sess.id) data.id = sess.id;
-    bbSaveSession(data);
+    await bbSaveSession(data);
     bbSyncToHabits(data);
+    await bbFetchSessions();
   }
 
   for (let i = 0; i < 3; i++) {
@@ -5824,21 +5830,21 @@ function renderBBWorkout() {
       paDiv.textContent = Math.max(0, 8 - v);
     });
     // Done pills
-    round.querySelector('.bb-done-ht').addEventListener('click', () => {
+    round.querySelector('.bb-done-ht').addEventListener('click', async () => {
       const sd = LS.get('bb_set_done_' + editDate, { ht: [false,false,false], pu: [false,false,false] });
       if (!sd.ht) { sd.ht = [false,false,false]; sd.pu = [false,false,false]; }
       sd.ht[i] = !sd.ht[i];
       LS.set('bb_set_done_' + editDate, sd);
-      bbSavePartial();
-      renderBBWorkout();
+      await bbSavePartial();
+      renderBB();
     });
-    round.querySelector('.bb-done-pu').addEventListener('click', () => {
+    round.querySelector('.bb-done-pu').addEventListener('click', async () => {
       const sd = LS.get('bb_set_done_' + editDate, { ht: [false,false,false], pu: [false,false,false] });
       if (!sd.ht) { sd.ht = [false,false,false]; sd.pu = [false,false,false]; }
       sd.pu[i] = !sd.pu[i];
       LS.set('bb_set_done_' + editDate, sd);
-      bbSavePartial();
-      renderBBWorkout();
+      await bbSavePartial();
+      renderBB();
     });
     c.appendChild(round);
 
@@ -5855,54 +5861,62 @@ function renderBBWorkout() {
       `;
       const restDisplay = document.createElement('div');
       restDisplay.style.cssText = 'font-size:2.2rem;font-weight:700;color:var(--sage);font-variant-numeric:tabular-nums;margin-bottom:10px;';
-      restDisplay.textContent = '1:00';
+      const fmtMs = (ms) => {
+        const s = Math.floor(ms / 1000);
+        const cs = Math.floor((ms % 1000) / 10);
+        return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + '.' + String(cs).padStart(2, '0');
+      };
+      let restMs = 60000;
+      restDisplay.textContent = fmtMs(restMs);
       rest.appendChild(restDisplay);
       const restBtn = document.createElement('button');
       restBtn.className = 'habit-action-pill';
       restBtn.textContent = 'Start Rest';
       let restInt = null;
-      let restSec = 60;
       const restInput = rest.querySelector('.bb-rest-input');
       restInput.addEventListener('change', () => {
         if (!restInt) {
-          restSec = parseInt(restInput.value) || 60;
-          restDisplay.textContent = Math.floor(restSec / 60) + ':' + String(restSec % 60).padStart(2, '0');
+          restMs = (parseInt(restInput.value) || 60) * 1000;
+          restDisplay.textContent = fmtMs(restMs);
         }
       });
       restBtn.addEventListener('click', () => {
         if (restInt) {
           clearInterval(restInt); restInt = null;
           restBtn.textContent = 'Start Rest';
-          restSec = parseInt(restInput.value) || 60;
-          restDisplay.textContent = Math.floor(restSec / 60) + ':' + String(restSec % 60).padStart(2, '0');
+          restMs = (parseInt(restInput.value) || 60) * 1000;
+          restDisplay.textContent = fmtMs(restMs);
           restDisplay.style.color = 'var(--sage)';
           return;
         }
-        restSec = parseInt(restInput.value) || 60;
+        restMs = (parseInt(restInput.value) || 60) * 1000;
         restBtn.textContent = 'Stop';
-        bbBeep(600, 0.15); // beep at start
+        bbBeep(600, 0.15);
+        let lastSec = Math.floor(restMs / 1000);
         restInt = setInterval(() => {
-          restSec--;
-          restDisplay.textContent = Math.floor(restSec / 60) + ':' + String(restSec % 60).padStart(2, '0');
-          // Last 5 seconds: tick beeps + red color
-          if (restSec <= 5 && restSec > 0) {
-            restDisplay.style.color = 'var(--terracotta)';
-            bbBeep(600, 0.08);
+          restMs -= 100;
+          restDisplay.textContent = fmtMs(restMs);
+          const curSec = Math.floor(restMs / 1000);
+          if (curSec !== lastSec) {
+            lastSec = curSec;
+            if (curSec <= 5 && curSec > 0) {
+              restDisplay.style.color = 'var(--terracotta)';
+              bbBeep(600, 0.08);
+            }
           }
-          if (restSec <= 0) {
+          if (restMs <= 0) {
             clearInterval(restInt); restInt = null;
             restBtn.textContent = 'Start Rest';
-            restDisplay.textContent = '0:00';
+            restDisplay.textContent = '0:00.00';
             restDisplay.style.color = 'var(--terracotta)';
-            // Long beep
             bbBeep(900, 0.5);
             setTimeout(() => {
-              restSec = parseInt(restInput.value) || 60;
-              restDisplay.textContent = Math.floor(restSec / 60) + ':' + String(restSec % 60).padStart(2, '0');
+              restMs = (parseInt(restInput.value) || 60) * 1000;
+              restDisplay.textContent = fmtMs(restMs);
               restDisplay.style.color = 'var(--sage)';
             }, 2000);
           }
-        }, 1000);
+        }, 100);
       });
       rest.appendChild(restBtn);
       c.appendChild(rest);
