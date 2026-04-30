@@ -3298,8 +3298,10 @@ function renderChallenges() {
       const endDateStr = localDateStr(endDate);
       const daysLeft = Math.max(0, Math.floor((endDate - todayDate) / 86400000) + 1);
       const totalDays = ch.days;
+      const totalWeeks = Math.ceil(totalDays / 7);
+      const totalGoal = ch.freq * totalWeeks;
       const completed = challengeDaysCompleted(ch);
-      const successPct = totalDays > 0 ? Math.round((completed / totalDays) * 100) : 0;
+      const successPct = totalGoal > 0 ? Math.round((completed / totalGoal) * 100) : 0;
       const isActive = todayDate >= startDate && todayDate <= endDate;
       const isDone = todayDate > endDate;
 
@@ -3312,8 +3314,8 @@ function renderChallenges() {
         <span class="challenge-name">${statusEmoji} ${ch.name}</span>
         <div class="challenge-pills">
           <span class="challenge-pill countdown">${statusText}</span>
-          <span class="challenge-pill freq">${ch.freq} ${ch.unit || 'x/week'}</span>
-          <span class="challenge-pill score">${completed}/${totalDays} days</span>
+          <span class="challenge-pill freq">${ch.freq}x/wk \u00D7 ${totalWeeks}wks = ${totalGoal}</span>
+          <span class="challenge-pill score">${completed}/${totalGoal}</span>
           <span class="challenge-pill done">${successPct}%</span>
         </div>
       `;
@@ -3338,7 +3340,7 @@ function renderChallenges() {
       prog.className = 'challenge-progress';
       prog.innerHTML = `
         <div class="challenge-progress-bar"><div class="challenge-progress-fill" style="width:${successPct}%"></div></div>
-        <span class="challenge-progress-label">${completed}/${totalDays}</span>
+        <span class="challenge-progress-label">${completed}/${totalGoal}</span>
       `;
       card.appendChild(prog);
 
@@ -3394,13 +3396,13 @@ function renderChallenges() {
         const weekMet = weekDone >= ch.freq;
         stats.innerHTML = `
           <span class="hs-badge week">Week: <strong>${weekDone}</strong>/${ch.freq}<span class="hs-check">${weekMet ? '\u2713' : ''}</span></span>
-          <span class="hs-badge month">${completed}/${totalDays} done</span>
+          <span class="hs-badge month">${completed}/${totalGoal} done</span>
           <span class="hs-badge year">${successPct}%</span>
         `;
         card.appendChild(stats);
 
         // Remaining/pace
-        const remaining = Math.max(0, totalDays - completed);
+        const remaining = Math.max(0, totalGoal - completed);
         const weeksLeftCh = Math.max(1, Math.ceil(daysLeft / 7));
         const pacePerWeek = remaining > 0 ? Math.ceil(remaining / weeksLeftCh) : 0;
         const thisWeekOwed = Math.max(0, ch.freq - weekDone);
@@ -5670,6 +5672,8 @@ function renderBBTimer() {
           bbBeep(600, 0.5); setTimeout(() => bbBeep(600, 0.5), 200); setTimeout(() => bbBeep(600, 0.5), 400);
         } else if (bbTimerSeconds === 60) {
           bbBeep(500, 0.3); setTimeout(() => bbBeep(500, 0.3), 200); // 60s warning
+        } else if (bbTimerSeconds > 60 && bbTimerSeconds % 60 === 0) {
+          bbBeep(400, 0.15); // minute beep
         } else if (bbBeepsOn && interval > 0 && bbTimerSeconds <= nextBeepAt) {
           bbBeep(800, 0.1);
           nextBeepAt -= interval;
@@ -5703,7 +5707,10 @@ function renderBBWorkout() {
     editDate = today;
   }
   const isNew = !sess || !sess.id;
-  if (!sess) sess = { session_date: today, supersets: Array(4).fill(null).map(() => ({ pullup_unassisted: 4, pullup_assisted: 4, ht_reps: 8, ht_pulses: 8, ht_hold: 8, ht_weight: 70 })), bdp_type: '6-count', bdp_target: 0, bdp_actual: 0, notes: '' };
+  if (!sess) sess = { session_date: today, supersets: Array(3).fill(null).map(() => ({ pullup_unassisted: 4, pullup_assisted: 4, ht_reps: 8, ht_pulses: 8, ht_hold: 8, ht_weight: 70 })), bdp_type: '6-count', bdp_target: 0, bdp_actual: 0, notes: '' };
+  // Ensure 3 sets
+  while (sess.supersets.length < 3) sess.supersets.push({ pullup_unassisted: 4, pullup_assisted: 4, ht_reps: 8, ht_pulses: 8, ht_hold: 8, ht_weight: 70 });
+  if (sess.supersets.length > 3) sess.supersets = sess.supersets.slice(0, 3);
 
   // Title showing which date
   if (bbEditSession) {
@@ -5726,15 +5733,28 @@ function renderBBWorkout() {
 
   const inp = (val, min) => `<input type="number" value="${val}" ${min ? 'min="'+min+'"' : ''} style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;text-align:center;">`;
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 3; i++) {
     const s = sess.supersets[i];
+    const setDone = LS.get('bb_set_done_' + today, [false,false,false]);
     const round = document.createElement('div');
     round.className = 'bb-round';
-    round.style.cssText = 'background:var(--bg);border-radius:10px;padding:12px;margin-bottom:4px;';
+    round.style.cssText = 'margin-bottom:4px;';
     round.innerHTML = `
-      <div style="font-size:0.75rem;font-weight:600;color:var(--terracotta);margin-bottom:8px;">Round ${i + 1}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:0.75rem;font-weight:600;color:var(--terracotta);">Set ${i + 1}</span>
+        <div class="hw-check bb-set-check ${setDone[i] ? 'checked' : ''}" style="width:24px;height:24px;" data-set="${i}"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="background:var(--bg);border-radius:10px;padding:10px;">
+          <div style="font-size:0.68rem;font-weight:600;color:var(--text);margin-bottom:6px;">Hip Thrusts</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Reps</div>${inp(s.ht_reps)}</div>
+            <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Pulses</div>${inp(s.ht_pulses)}</div>
+            <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Hold (sec)</div>${inp(s.ht_hold)}</div>
+            <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Weight (kg)</div>${inp(s.ht_weight)}</div>
+          </div>
+        </div>
+        <div style="background:var(--bg);border-radius:10px;padding:10px;">
           <div style="font-size:0.68rem;font-weight:600;color:var(--text);margin-bottom:6px;">Pull-ups</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
             <div>
@@ -5747,29 +5767,27 @@ function renderBBWorkout() {
             </div>
           </div>
         </div>
-        <div>
-          <div style="font-size:0.68rem;font-weight:600;color:var(--text);margin-bottom:6px;">Hip Thrusts</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-            <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Reps</div>${inp(s.ht_reps)}</div>
-            <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Pulses</div>${inp(s.ht_pulses)}</div>
-            <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Hold (sec)</div>${inp(s.ht_hold)}</div>
-            <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Weight (kg)</div>${inp(s.ht_weight)}</div>
-          </div>
-        </div>
       </div>
     `;
     // Auto-calc assisted
-    const puInp = round.querySelectorAll('input')[0];
+    const puInp = round.querySelectorAll('input')[4]; // 5th input (after 4 HT inputs)
     const paDiv = round.querySelector('.bb-pa');
     puInp.addEventListener('input', () => {
       const v = Math.max(4, parseInt(puInp.value) || 4);
       puInp.value = v;
       paDiv.textContent = Math.max(0, 8 - v);
     });
+    // Set checkmark
+    round.querySelector('.bb-set-check').addEventListener('click', () => {
+      const sd = LS.get('bb_set_done_' + today, [false,false,false]);
+      sd[i] = !sd[i];
+      LS.set('bb_set_done_' + today, sd);
+      renderBBWorkout();
+    });
     c.appendChild(round);
 
-    // Rest timer between rounds (not after last)
-    if (i < 3) {
+    // Rest timer between sets (not after last)
+    if (i < 2) {
       const rest = document.createElement('div');
       rest.style.cssText = 'background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px;text-align:center;';
       rest.innerHTML = `
@@ -5806,6 +5824,7 @@ function renderBBWorkout() {
         }
         restSec = parseInt(restInput.value) || 60;
         restBtn.textContent = 'Stop';
+        bbBeep(600, 0.15); // beep at start
         restInt = setInterval(() => {
           restSec--;
           restDisplay.textContent = Math.floor(restSec / 60) + ':' + String(restSec % 60).padStart(2, '0');
@@ -5877,16 +5896,17 @@ function renderBBWorkout() {
   saveBtn.addEventListener('click', async () => {
     const rounds = c.querySelectorAll('.bb-round');
     const supersets = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 3; i++) {
       const inputs = rounds[i].querySelectorAll('input');
-      const pu = Math.max(4, parseInt(inputs[0].value) || 4);
+      // HT inputs first (0-3), then PU input (4)
+      const pu = Math.max(4, parseInt(inputs[4].value) || 4);
       supersets.push({
         pullup_unassisted: pu,
         pullup_assisted: Math.max(0, 8 - pu),
-        ht_reps: parseInt(inputs[1].value) || 8,
-        ht_pulses: parseInt(inputs[2].value) || 8,
-        ht_hold: parseInt(inputs[3].value) || 8,
-        ht_weight: parseInt(inputs[4].value) || 70
+        ht_reps: parseInt(inputs[0].value) || 8,
+        ht_pulses: parseInt(inputs[1].value) || 8,
+        ht_hold: parseInt(inputs[2].value) || 8,
+        ht_weight: parseInt(inputs[3].value) || 70
       });
     }
     const bdpInputs = c.querySelector('.bb-bdp').querySelectorAll('input');
@@ -5937,7 +5957,7 @@ function renderBBHistory() {
       const row = document.createElement('div');
       row.className = 'challenge-card';
       row.style.marginBottom = '8px';
-      const avgPU = sess.supersets ? Math.round(sess.supersets.reduce((s, r) => s + (r.pullup_unassisted || 0), 0) / 4 * 10) / 10 : 0;
+      const avgPU = sess.supersets ? Math.round(sess.supersets.reduce((s, r) => s + (r.pullup_unassisted || 0), 0) / (sess.supersets ? sess.supersets.length : 3) * 10) / 10 : 0;
       row.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
           <span style="font-weight:600;font-size:0.85rem;">${sess.session_date}</span>
