@@ -5758,7 +5758,7 @@ function renderBBWorkout() {
   // Helper to save current form data as a partial session
   async function bbSavePartial() {
     const rounds = c.querySelectorAll('.bb-round');
-    const sd = LS.get('bb_set_done_' + editDate, { ht: [false,false,false], pu: [false,false,false] });
+    const sd = (() => { const raw = LS.get('bb_set_done_' + editDate, null); if (!raw || Array.isArray(raw)) { const v = { ht: [false,false,false], pu: [false,false,false] }; LS.set('bb_set_done_' + editDate, v); return v; } if (!raw.ht) { raw.ht = [false,false,false]; raw.pu = [false,false,false]; } return raw; })();
     if (!sd.ht) { sd.ht = [false,false,false]; sd.pu = [false,false,false]; }
     const supersets = [];
     for (let r = 0; r < rounds.length; r++) {
@@ -5795,7 +5795,7 @@ function renderBBWorkout() {
 
   for (let i = 0; i < 3; i++) {
     const s = sess.supersets[i];
-    const setDone = LS.get('bb_set_done_' + editDate, { ht: [false,false,false], pu: [false,false,false] });
+    const setDone = (() => { const raw = LS.get('bb_set_done_' + editDate, null); if (!raw || Array.isArray(raw)) { const v = { ht: [false,false,false], pu: [false,false,false] }; LS.set('bb_set_done_' + editDate, v); return v; } if (!raw.ht) { raw.ht = [false,false,false]; raw.pu = [false,false,false]; } return raw; })();
     if (!setDone.ht) { setDone.ht = [false,false,false]; setDone.pu = [false,false,false]; }
     const round = document.createElement('div');
     round.className = 'bb-round';
@@ -5845,7 +5845,7 @@ function renderBBWorkout() {
     const htBtn = round.querySelector('.bb-done-ht');
     const puBtn = round.querySelector('.bb-done-pu');
     htBtn.addEventListener('click', async () => {
-      const sd = LS.get('bb_set_done_' + editDate, { ht: [false,false,false], pu: [false,false,false] });
+      const sd = (() => { const raw = LS.get('bb_set_done_' + editDate, null); if (!raw || Array.isArray(raw)) { const v = { ht: [false,false,false], pu: [false,false,false] }; LS.set('bb_set_done_' + editDate, v); return v; } if (!raw.ht) { raw.ht = [false,false,false]; raw.pu = [false,false,false]; } return raw; })();
       if (!sd.ht) { sd.ht = [false,false,false]; sd.pu = [false,false,false]; }
       sd.ht[i] = !sd.ht[i];
       LS.set('bb_set_done_' + editDate, sd);
@@ -5856,7 +5856,7 @@ function renderBBWorkout() {
       renderBBBanner();
     });
     puBtn.addEventListener('click', async () => {
-      const sd = LS.get('bb_set_done_' + editDate, { ht: [false,false,false], pu: [false,false,false] });
+      const sd = (() => { const raw = LS.get('bb_set_done_' + editDate, null); if (!raw || Array.isArray(raw)) { const v = { ht: [false,false,false], pu: [false,false,false] }; LS.set('bb_set_done_' + editDate, v); return v; } if (!raw.ht) { raw.ht = [false,false,false]; raw.pu = [false,false,false]; } return raw; })();
       if (!sd.ht) { sd.ht = [false,false,false]; sd.pu = [false,false,false]; }
       sd.pu[i] = !sd.pu[i];
       LS.set('bb_set_done_' + editDate, sd);
