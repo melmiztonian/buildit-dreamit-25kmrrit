@@ -5744,10 +5744,10 @@ function renderBBWorkout() {
     c.appendChild(editLabel);
   }
 
-  // Superset x4
+  // Superset x3
   const ssTitle = document.createElement('div');
   ssTitle.style.cssText = 'font-size:0.85rem;font-weight:700;margin-bottom:10px;';
-  ssTitle.textContent = 'Superset x4';
+  ssTitle.textContent = 'Superset x3';
   c.appendChild(ssTitle);
 
   const inp = (val, min) => `<input type="number" value="${val}" ${min ? 'min="'+min+'"' : ''} style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;text-align:center;">`;
@@ -5813,7 +5813,6 @@ function renderBBWorkout() {
             <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Hold (sec)</div>${inp(s.ht_hold)}</div>
             <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Weight (kg)</div>${inp(s.ht_weight)}</div>
           </div>
-          <button class="habit-action-pill bb-done-ht ${setDone.ht[i] ? 'active' : ''}" style="margin-top:8px;width:100%;font-size:0.72rem;">${setDone.ht[i] ? '\u2713 Done' : 'Done'}</button>
         </div>
         <div style="background:var(--bg);border-radius:10px;padding:10px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
@@ -5829,8 +5828,11 @@ function renderBBWorkout() {
               <div class="bb-pa" style="font-size:0.85rem;text-align:center;padding:5px;color:var(--terracotta);font-weight:600;background:var(--card);border-radius:6px;border:1px solid var(--border);">${8 - s.pullup_unassisted}</div>
             </div>
           </div>
-          <button class="habit-action-pill bb-done-pu ${setDone.pu[i] ? 'active' : ''}" style="margin-top:8px;width:100%;font-size:0.72rem;">${setDone.pu[i] ? '\u2713 Done' : 'Done'}</button>
         </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;">
+        <button class="habit-action-pill bb-done-ht ${setDone.ht[i] ? 'active' : ''}" style="width:100%;font-size:0.72rem;">${setDone.ht[i] ? '\u2713 HT Done' : 'HT Done'}</button>
+        <button class="habit-action-pill bb-done-pu ${setDone.pu[i] ? 'active' : ''}" style="width:100%;font-size:0.72rem;">${setDone.pu[i] ? '\u2713 PU Done' : 'PU Done'}</button>
       </div>
     `;
     // Auto-calc assisted
@@ -5868,8 +5870,8 @@ function renderBBWorkout() {
     });
     c.appendChild(round);
 
-    // Rest timer between sets (not after last)
-    if (i < 2) {
+    // Rest timer after each set
+    {
       const rest = document.createElement('div');
       rest.style.cssText = 'background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px;text-align:center;';
       rest.innerHTML = `
