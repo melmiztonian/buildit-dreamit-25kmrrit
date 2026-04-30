@@ -5556,22 +5556,20 @@ function renderBBTimer() {
       <button class="habit-action-pill ${bbBeepsOn ? 'active' : ''}" id="bb-beep-toggle">${bbBeepsOn ? 'ON' : 'OFF'}</button>
     </div>
     <div style="text-align:center;margin:16px 0;">
-      <div style="font-size:3rem;font-weight:700;color:var(--terracotta);font-variant-numeric:tabular-nums;letter-spacing:2px;">${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}<span style="font-size:1.4rem;color:var(--sand);">.${String(cs).padStart(2,'0')}</span></div>
-      <div style="font-size:1.4rem;font-weight:600;color:var(--text);margin-top:4px;">Reps: ${bbTimerReps}</div>
-      ${bbTimerRunning && bbTimerTarget > 0 ? `
-        <div style="margin-top:12px;">
+      <div id="bb-timer-display" style="font-size:3rem;font-weight:700;color:var(--terracotta);font-variant-numeric:tabular-nums;letter-spacing:2px;">${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}<span style="font-size:1.4rem;color:var(--sand);">.${String(cs).padStart(2,'0')}</span></div>
+      <div id="bb-timer-reps" style="font-size:1.4rem;font-weight:600;color:var(--text);margin-top:4px;">Reps: ${bbTimerReps}</div>
+      <div id="bb-timer-pace" style="margin-top:12px;">${bbTimerRunning && bbTimerTarget > 0 ? `
           <div style="font-size:1.8rem;font-weight:700;color:${paceColor};font-variant-numeric:tabular-nums;">${secUntilNextRep.toFixed(1)}s</div>
           <div style="font-size:0.7rem;color:var(--muted);">until next rep</div>
-        </div>
-      ` : ''}
+      ` : ''}</div>
     </div>
     ${bbTimerTarget > 0 ? `
       <div style="margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--muted);margin-bottom:3px;">
-          <span>0:00</span><span>${overallPct}%</span><span>20:00</span>
+          <span>0:00</span><span id="bb-timer-progress-pct">${overallPct}%</span><span>20:00</span>
         </div>
         <div class="progress-bar" style="height:18px;border-radius:9px;">
-          <div class="progress-fill" style="width:${overallPct}%;"></div>
+          <div id="bb-timer-progress-fill" class="progress-fill" style="width:${overallPct}%;"></div>
         </div>
       </div>
     ` : ''}
@@ -5697,7 +5695,28 @@ function renderBBTimer() {
             nextBeepAtMs -= intervalSec * 1000;
           }
         }
-        renderBBTimer();
+        // Lightweight display update (no DOM rebuild)
+        const timerDisplay = c.querySelector('#bb-timer-display');
+        const repsDisplay = c.querySelector('#bb-timer-reps');
+        const paceDisplay = c.querySelector('#bb-timer-pace');
+        const progressFill = c.querySelector('#bb-timer-progress-fill');
+        const progressPct = c.querySelector('#bb-timer-progress-pct');
+        if (timerDisplay) {
+          const m = Math.floor(Math.floor(bbTimerMs/1000)/60);
+          const s = Math.floor(bbTimerMs/1000)%60;
+          const cs2 = Math.floor((bbTimerMs%1000)/10);
+          timerDisplay.innerHTML = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'<span style="font-size:1.4rem;color:var(--sand);">.'+String(cs2).padStart(2,'0')+'</span>';
+        }
+        if (repsDisplay) repsDisplay.textContent = 'Reps: ' + bbTimerReps;
+        if (paceDisplay && bbTimerTarget > 0) {
+          const elMs2 = 1200000 - bbTimerMs;
+          const intSec2 = 1200 / bbTimerTarget;
+          const untilNext = Math.max(0, intSec2 - ((elMs2/1000) % intSec2));
+          const pc = untilNext > intSec2*0.5 ? 'var(--sage)' : 'var(--terracotta)';
+          paceDisplay.innerHTML = '<div style="font-size:1.8rem;font-weight:700;color:'+pc+';font-variant-numeric:tabular-nums;">'+untilNext.toFixed(1)+'s</div><div style="font-size:0.7rem;color:var(--muted);">until next rep</div>';
+        }
+        if (progressFill) progressFill.style.width = Math.min(100, Math.round(((1200000-bbTimerMs)/1200000)*100))+'%';
+        if (progressPct) progressPct.textContent = Math.min(100, Math.round(((1200000-bbTimerMs)/1200000)*100))+'%';
       }, 100);
     }
     renderBBTimer();
