@@ -5752,18 +5752,29 @@ function renderBBWorkout() {
 
   const inp = (val, min) => `<input type="number" value="${val}" ${min ? 'min="'+min+'"' : ''} style="width:100%;border:1px solid var(--border);border-radius:6px;padding:5px;font-family:inherit;font-size:0.82rem;background:var(--card);outline:none;text-align:center;">`;
 
+  // Track the session ID for partial saves (so we update, not create duplicates)
+  let partialSessionId = sess.id || null;
+
   // Helper to save current form data as a partial session
   async function bbSavePartial() {
     const rounds = c.querySelectorAll('.bb-round');
+    const sd = LS.get('bb_set_done_' + editDate, { ht: [false,false,false], pu: [false,false,false] });
+    if (!sd.ht) { sd.ht = [false,false,false]; sd.pu = [false,false,false]; }
     const supersets = [];
     for (let r = 0; r < rounds.length; r++) {
       const inputs = rounds[r].querySelectorAll('input');
       if (inputs.length < 5) continue;
       const pu = Math.max(4, parseInt(inputs[4].value) || 4);
+      // Only count reps for sets marked Done
+      const htDone = sd.ht[r];
+      const puDone = sd.pu[r];
       supersets.push({
-        pullup_unassisted: pu, pullup_assisted: Math.max(0, 8 - pu),
-        ht_reps: parseInt(inputs[0].value) || 8, ht_pulses: parseInt(inputs[1].value) || 8,
-        ht_hold: parseInt(inputs[2].value) || 8, ht_weight: parseInt(inputs[3].value) || 70
+        pullup_unassisted: puDone ? pu : 0,
+        pullup_assisted: puDone ? Math.max(0, 8 - pu) : 0,
+        ht_reps: htDone ? (parseInt(inputs[0].value) || 8) : 0,
+        ht_pulses: htDone ? (parseInt(inputs[1].value) || 8) : 0,
+        ht_hold: htDone ? (parseInt(inputs[2].value) || 8) : 0,
+        ht_weight: parseInt(inputs[3].value) || 70
       });
     }
     const bdpEl = c.querySelector('.bb-bdp');
@@ -5775,8 +5786,9 @@ function renderBBWorkout() {
       bdp_actual: bdpInputs.length ? parseInt(bdpInputs[1].value) || 0 : 0,
       notes: $('bb-notes') ? $('bb-notes').value.trim() : ''
     };
-    if (!isNew && sess.id) data.id = sess.id;
+    if (partialSessionId) data.id = partialSessionId;
     await bbSaveSession(data);
+    if (!partialSessionId && data.id) partialSessionId = data.id;
     bbSyncToHabits(data);
     await bbFetchSessions();
   }
