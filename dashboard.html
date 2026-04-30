@@ -5801,7 +5801,6 @@ function renderBBWorkout() {
             <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Hold (sec)</div>${inp(s.ht_hold)}</div>
             <div><div style="font-size:0.6rem;color:var(--muted);margin-bottom:2px;">Weight (kg)</div>${inp(s.ht_weight)}</div>
           </div>
-          <button class="habit-action-pill bb-done-ht ${setDone.ht[i] ? 'active' : ''}" style="margin-top:8px;width:100%;font-size:0.72rem;">${setDone.ht[i] ? '\u2713 Done' : 'Done'}</button>
         </div>
         <div style="background:var(--bg);border-radius:10px;padding:10px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
@@ -5817,8 +5816,11 @@ function renderBBWorkout() {
               <div class="bb-pa" style="font-size:0.85rem;text-align:center;padding:5px;color:var(--terracotta);font-weight:600;background:var(--card);border-radius:6px;border:1px solid var(--border);">${8 - s.pullup_unassisted}</div>
             </div>
           </div>
-          <button class="habit-action-pill bb-done-pu ${setDone.pu[i] ? 'active' : ''}" style="margin-top:8px;width:100%;font-size:0.72rem;">${setDone.pu[i] ? '\u2713 Done' : 'Done'}</button>
         </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;">
+        <button class="habit-action-pill bb-done-ht ${setDone.ht[i] ? 'active' : ''}" style="width:100%;font-size:0.72rem;">${setDone.ht[i] ? '\u2713 HT Done' : 'HT Done'}</button>
+        <button class="habit-action-pill bb-done-pu ${setDone.pu[i] ? 'active' : ''}" style="width:100%;font-size:0.72rem;">${setDone.pu[i] ? '\u2713 PU Done' : 'PU Done'}</button>
       </div>
     `;
     // Auto-calc assisted
@@ -5830,21 +5832,29 @@ function renderBBWorkout() {
       paDiv.textContent = Math.max(0, 8 - v);
     });
     // Done pills
-    round.querySelector('.bb-done-ht').addEventListener('click', async () => {
+    const htBtn = round.querySelector('.bb-done-ht');
+    const puBtn = round.querySelector('.bb-done-pu');
+    htBtn.addEventListener('click', async () => {
       const sd = LS.get('bb_set_done_' + editDate, { ht: [false,false,false], pu: [false,false,false] });
       if (!sd.ht) { sd.ht = [false,false,false]; sd.pu = [false,false,false]; }
       sd.ht[i] = !sd.ht[i];
       LS.set('bb_set_done_' + editDate, sd);
+      htBtn.classList.toggle('active', sd.ht[i]);
+      htBtn.textContent = sd.ht[i] ? '\u2713 Done' : 'Done';
       await bbSavePartial();
-      renderBB();
+      renderBBWeek();
+      renderBBBanner();
     });
-    round.querySelector('.bb-done-pu').addEventListener('click', async () => {
+    puBtn.addEventListener('click', async () => {
       const sd = LS.get('bb_set_done_' + editDate, { ht: [false,false,false], pu: [false,false,false] });
       if (!sd.ht) { sd.ht = [false,false,false]; sd.pu = [false,false,false]; }
       sd.pu[i] = !sd.pu[i];
       LS.set('bb_set_done_' + editDate, sd);
+      puBtn.classList.toggle('active', sd.pu[i]);
+      puBtn.textContent = sd.pu[i] ? '\u2713 Done' : 'Done';
       await bbSavePartial();
-      renderBB();
+      renderBBWeek();
+      renderBBBanner();
     });
     c.appendChild(round);
 
