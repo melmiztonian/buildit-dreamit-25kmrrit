@@ -3406,10 +3406,41 @@ function renderChallenges() {
         const weeksLeftCh = Math.max(1, Math.ceil(daysLeft / 7));
         const pacePerWeek = remaining > 0 ? Math.ceil(remaining / weeksLeftCh) : 0;
         const thisWeekOwed = Math.max(0, ch.freq - weekDone);
-        if (isActive && remaining > 0) {
+        const expectedByNow = Math.max(0, totalGoal - (weeksLeftCh * ch.freq));
+        const behind = expectedByNow - completed;
+        const prevDebt = Math.max(0, behind);
+        const totalDebt = thisWeekOwed + prevDebt;
+
+        if (remaining > 0) {
           const pace = document.createElement('div');
           pace.className = 'habit-pace';
-          pace.innerHTML = `<strong>${remaining}</strong> remaining<br><span style="color:var(--terracotta);">Current debt: <strong>${thisWeekOwed}</strong> more this week</span>`;
+          let lines = `<strong>${remaining}</strong> remaining to hit goal`;
+          if (totalDebt > 0) {
+            lines += `<br><span style="color:var(--terracotta);">Current debt: <strong>${totalDebt}</strong></span> &mdash; <strong>${thisWeekOwed}</strong> more this week` + (prevDebt > 0 ? ` + <strong>${prevDebt}</strong> from previous weeks` : '');
+          } else {
+            lines += `<br><span style="color:var(--terracotta);">Current debt: <strong>0</strong></span> &mdash; <strong>${thisWeekOwed}</strong> more this week`;
+          }
+          if (behind <= 0) {
+            lines += `<br><span style="color:var(--sage);">${Math.abs(behind)} ahead of pace</span>`;
+          }
+          if (behind > 0) {
+            lines += `<br><span style="font-weight:600;color:var(--text);margin-top:4px;display:inline-block;">Action plan:</span>`;
+            if (behind < 5) {
+              lines += `<br>Do <strong>${ch.freq + 1}</strong>/week for <strong>${behind}</strong> week${behind > 1 ? 's' : ''}, then <strong>${ch.freq}</strong>/week after`;
+            } else {
+              [5, 10].forEach(w => {
+                const sprintWeeks = Math.min(w, weeksLeftCh);
+                const boostPerWeek = ch.freq + Math.ceil(behind / sprintWeeks);
+                lines += `<br>Do <strong>${boostPerWeek}</strong>/week for <strong>${sprintWeeks}</strong> weeks, then <strong>${ch.freq}</strong>/week after`;
+              });
+            }
+          }
+          pace.innerHTML = lines;
+          card.appendChild(pace);
+        } else if (isDone || completed >= totalGoal) {
+          const pace = document.createElement('div');
+          pace.className = 'habit-pace';
+          pace.innerHTML = `<strong>Goal reached!</strong> \uD83C\uDF89`;
           card.appendChild(pace);
         }
       }
@@ -6029,8 +6060,10 @@ function renderBBWorkout() {
       bdp_actual: parseInt(bdpInputs[1].value) || 0,
       notes: $('bb-notes').value.trim()
     };
-    if (!isNew && sess.id) data.id = sess.id;
+    if (partialSessionId) data.id = partialSessionId;
+    else if (!isNew && sess.id) data.id = sess.id;
     await bbSaveSession(data);
+    if (!partialSessionId && data.id) partialSessionId = data.id;
     bbSyncToHabits(data);
     bbEditSession = null;
     await bbFetchSessions();
