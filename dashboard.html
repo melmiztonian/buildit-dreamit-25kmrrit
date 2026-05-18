@@ -1881,7 +1881,6 @@ body {
 <nav class="tab-nav">
   <button class="tab-btn active" data-tab="tab-dashboard">Dashboard</button>
   <button class="tab-btn" data-tab="tab-habits">Habit Tracker</button>
-  <button class="tab-btn" data-tab="tab-challenges">Challenges</button>
   <button class="tab-btn" data-tab="tab-business">Building the Dream</button>
   <button class="tab-btn" data-tab="tab-bb">Burpees & Booty</button>
   <button class="tab-btn" data-tab="tab-cal">Cal's Framework</button>
@@ -1956,6 +1955,12 @@ body {
 <section id="tab-habits" class="tab-page">
   <div class="mini-nav" data-mini-tab="tab-habits"></div>
 
+  <!-- Challenges -->
+  <div class="card" data-card-id="challenges-main" data-card-label="Challenges">
+    <div class="card-title" data-editable="title_challenges">Challenges</div>
+    <div id="challenges-container" class="habit-grid-2col"></div>
+  </div>
+
   <!-- Countdown Bar -->
   <div class="card countdown-bar" data-card-id="countdown" data-card-label="Countdown">
     <div class="countdown-stats" id="countdown-stats"></div>
@@ -1994,18 +1999,6 @@ body {
 
 </section>
 
-<!-- ==================== TAB 3: CHALLENGES ==================== -->
-<section id="tab-challenges" class="tab-page">
-  <div class="mini-nav" data-mini-tab="tab-challenges"></div>
-
-  <div class="card" data-card-id="challenges-main" data-card-label="Challenges">
-    <div class="card-title" data-editable="title_challenges">Challenges</div>
-    <div id="challenges-container" class="habit-grid-2col"></div>
-  </div>
-
-  <div class="reorder-panel" data-tab="tab-challenges"></div>
-
-</section>
 
 <!-- ==================== TAB 4: BUILDING THE DREAM ==================== -->
 <section id="tab-business" class="tab-page">
