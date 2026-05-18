@@ -1984,6 +1984,12 @@ body {
     <div id="household-habits-container"></div>
   </div>
 
+  <!-- Weight Tracker -->
+  <div class="card half-width" data-card-id="weight-tracker" data-card-label="Weight">
+    <div class="card-title" data-editable="title_weight">Weight</div>
+    <div id="weight-tracker-container"></div>
+  </div>
+
   <div class="reorder-panel" data-tab="tab-habits"></div>
 
 </section>
@@ -3586,6 +3592,15 @@ function renderChallenges() {
             const cell = document.createElement('div');
             cell.className = 'month-cal-cell' + (filled ? ' filled' : '') + (ds === today ? ' today' : '');
             cell.textContent = d;
+            cell.style.cursor = 'pointer';
+            cell.addEventListener('click', () => {
+              const ws = getWeekStart(ds);
+              const di = new Date(ds + 'T12:00:00').getDay();
+              const wd = LS.get('challenge_' + ch.id + '_' + ws, Array(7).fill(0));
+              wd[di] = (wd[di] === 1 || wd[di] === true) ? 0 : 1;
+              LS.set('challenge_' + ch.id + '_' + ws, wd);
+              renderChallenges();
+            });
             cal.appendChild(cell);
           }
           detailPanel.appendChild(cal);
@@ -3623,6 +3638,15 @@ function renderChallenges() {
               const cell = document.createElement('div');
               cell.className = 'ym-cell' + (filled ? ' filled' : '') + (ds === today ? ' today' : '');
               cell.textContent = d;
+              cell.style.cursor = 'pointer';
+              cell.addEventListener('click', () => {
+                const ws = getWeekStart(ds);
+                const di2 = new Date(ds + 'T12:00:00').getDay();
+                const wd = LS.get('challenge_' + ch.id + '_' + ws, Array(7).fill(0));
+                wd[di2] = (wd[di2] === 1 || wd[di2] === true) ? 0 : 1;
+                LS.set('challenge_' + ch.id + '_' + ws, wd);
+                renderChallenges();
+              });
               mGrid.appendChild(cell);
             }
             mBlock.appendChild(mGrid);
@@ -6342,6 +6366,124 @@ async function initBB() {
   renderBB();
 }
 
+/* ================================================================
+   WEIGHT TRACKER
+   ================================================================ */
+function renderWeightTracker() {
+  const c = $('weight-tracker-container');
+  if (!c) return;
+  c.innerHTML = '';
+  const today = todayStr();
+  const weightUnit = LS.get('weight_unit', 'kg');
+  const kgToLbs = v => Math.round(v * 2.20462 * 10) / 10;
+  const lbsToKg = v => Math.round(v / 2.20462 * 10) / 10;
+  const toLbs = v => weightUnit === 'kg' ? kgToLbs(v) : v;
+  const fromLbs = v => weightUnit === 'kg' ? lbsToKg(v) : v;
+  const weightData = LS.get('weight_global', {});
+
+  // Input
+  const wWrap = document.createElement('div');
+  wWrap.className = 'challenge-weight';
+  const wLabel = document.createElement('label');
+  wLabel.textContent = '\u2696\uFE0F Today:';
+  const wInp = document.createElement('input');
+  wInp.type = 'number';
+  wInp.step = '0.1';
+  wInp.placeholder = weightUnit;
+  wInp.value = weightData[today] ? fromLbs(weightData[today]) : '';
+  wInp.addEventListener('blur', () => {
+    const wd = LS.get('weight_global', {});
+    if (wInp.value.trim()) { wd[today] = toLbs(parseFloat(wInp.value)); } else { delete wd[today]; }
+    LS.set('weight_global', wd);
+    renderWeightTracker();
+  });
+  const unitBtn = document.createElement('button');
+  unitBtn.className = 'habit-action-pill';
+  unitBtn.style.cssText = 'font-size:0.7rem;padding:3px 10px;';
+  unitBtn.textContent = weightUnit.toUpperCase();
+  unitBtn.addEventListener('click', () => {
+    LS.set('weight_unit', weightUnit === 'kg' ? 'lbs' : 'kg');
+    renderWeightTracker();
+  });
+  wWrap.appendChild(wLabel);
+  wWrap.appendChild(wInp);
+  wWrap.appendChild(unitBtn);
+  c.appendChild(wWrap);
+
+  // Chart
+  const allWeights = LS.get('weight_global', {});
+  const wDates = Object.keys(allWeights).sort();
+  if (wDates.length >= 2) {
+    const showChart = LS.get('weight_chart_open', false);
+    const chartToggle = document.createElement('div');
+    chartToggle.className = 'habit-actions';
+    const chartBtn = document.createElement('button');
+    chartBtn.className = 'habit-action-pill' + (showChart ? ' active' : '');
+    chartBtn.textContent = showChart ? 'Hide Chart' : 'Show Chart';
+    chartBtn.addEventListener('click', () => { LS.set('weight_chart_open', !showChart); renderWeightTracker(); });
+    chartToggle.appendChild(chartBtn);
+    c.appendChild(chartToggle);
+
+    if (showChart) {
+      const displayUnit = weightUnit;
+      const chartWrap = document.createElement('div');
+      chartWrap.className = 'weight-line-chart';
+      chartWrap.innerHTML = '<div class="weight-chart-title">\uD83D\uDCC9 Weight (' + displayUnit + ')</div>';
+      const canvas = document.createElement('canvas');
+      canvas.width = 600; canvas.height = 140;
+      chartWrap.appendChild(canvas);
+      c.appendChild(chartWrap);
+      setTimeout(() => {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.offsetWidth, h = canvas.offsetHeight;
+        canvas.width = w * 2; canvas.height = h * 2; ctx.scale(2, 2);
+        const firstDate = new Date(wDates[0] + 'T12:00:00');
+        const lastDate = new Date(todayStr() + 'T12:00:00');
+        const allDays = [];
+        const dd = new Date(firstDate);
+        while (dd <= lastDate) { allDays.push(localDateStr(dd)); dd.setDate(dd.getDate() + 1); }
+        if (!allDays.length) return;
+        const vals = allDays.map(dt => allWeights[dt] ? fromLbs(allWeights[dt]) : null);
+        const realVals = vals.filter(v => v !== null);
+        const minW = Math.min(...realVals) - 0.5, maxW = Math.max(...realVals) + 0.5;
+        const range = maxW - minW || 1;
+        const padL = 36, padR = 10, padT = 10, padB = 24;
+        const plotW = w - padL - padR, plotH = h - padT - padB;
+        ctx.strokeStyle = '#E0D6C8'; ctx.lineWidth = 0.5;
+        for (let g = 0; g <= 4; g++) {
+          const y = padT + (g / 4) * plotH;
+          ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+          ctx.fillStyle = '#8B7B6B'; ctx.font = '9px DM Sans'; ctx.textAlign = 'right';
+          ctx.fillText((maxW - (g / 4) * range).toFixed(1), padL - 4, y + 3);
+        }
+        ctx.strokeStyle = '#C47A5A'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath();
+        let started = false;
+        allDays.forEach((dt, i) => {
+          if (vals[i] === null) return;
+          const x = padL + (i / Math.max(1, allDays.length - 1)) * plotW;
+          const y = padT + ((maxW - vals[i]) / range) * plotH;
+          if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, y); }
+        });
+        ctx.stroke();
+        allDays.forEach((dt, i) => {
+          if (vals[i] === null) return;
+          const x = padL + (i / Math.max(1, allDays.length - 1)) * plotW;
+          const y = padT + ((maxW - vals[i]) / range) * plotH;
+          ctx.fillStyle = '#C47A5A'; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+        });
+        ctx.fillStyle = '#8B7B6B'; ctx.font = '7px DM Sans'; ctx.textAlign = 'center';
+        const labelEvery = Math.max(1, Math.ceil(allDays.length / 15));
+        allDays.forEach((dt, i) => {
+          if (i % labelEvery === 0 || i === allDays.length - 1) {
+            const x = padL + (i / Math.max(1, allDays.length - 1)) * plotW;
+            ctx.fillText(dt.slice(5), x, h - 4);
+          }
+        });
+      }, 50);
+    }
+  }
+}
+
 function initMiniNavs() {
   document.querySelectorAll('.mini-nav').forEach(nav => {
     const tabId = nav.dataset.miniTab;
@@ -6374,6 +6516,7 @@ function init() {
   initTabs();
   renderAllHabits();
   renderChallenges();
+  renderWeightTracker();
   renderTodos();
   initBB();
   initMiniNavs();
