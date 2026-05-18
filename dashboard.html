@@ -3445,166 +3445,45 @@ function renderChallenges() {
         }
       }
 
-      // Weight tracking (today)
-      if (isActive) {
-        const weightUnit = LS.get('weight_unit', 'kg');
-        const kgToLbs = v => Math.round(v * 2.20462 * 10) / 10;
-        const lbsToKg = v => Math.round(v / 2.20462 * 10) / 10;
-        const toLbs = v => weightUnit === 'kg' ? kgToLbs(v) : v;
-        const fromLbs = v => weightUnit === 'kg' ? lbsToKg(v) : v;
+      // Starting count + meta row (like habit cards)
+      const metaRow = document.createElement('div');
+      metaRow.className = 'habit-meta-row';
+      metaRow.innerHTML = `
+        <label>Starting count:</label>
+        <input type="number" min="0" value="${LS.get('challenge_start_' + ch.id, 0)}" style="width:68px;border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-family:inherit;font-size:0.8rem;background:var(--card);color:var(--text);outline:none;">
+        <label style="margin-left:8px;">Goal: <strong>${totalGoal}</strong></label>
+      `;
+      metaRow.querySelector('input').addEventListener('change', (e) => {
+        LS.set('challenge_start_' + ch.id, parseInt(e.target.value) || 0);
+        renderChallenges();
+      });
+      card.appendChild(metaRow);
 
-        const weightData = LS.get('weight_' + ch.id, {});
-        const wWrap = document.createElement('div');
-        wWrap.className = 'challenge-weight';
-        const wLabel = document.createElement('label');
-        wLabel.textContent = '\u2696\uFE0F Today\'s weight:';
-        const wInp = document.createElement('input');
-        wInp.type = 'number';
-        wInp.step = '0.1';
-        wInp.placeholder = weightUnit;
-        // Display in selected unit (stored as lbs)
-        wInp.value = weightData[today] ? fromLbs(weightData[today]) : '';
-        wInp.addEventListener('blur', () => {
-          const wd = LS.get('weight_' + ch.id, {});
-          if (wInp.value.trim()) { wd[today] = toLbs(parseFloat(wInp.value)); } else { delete wd[today]; }
-          LS.set('weight_' + ch.id, wd);
-          renderChallenges();
-        });
-        // Unit toggle
-        const unitBtn = document.createElement('button');
-        unitBtn.className = 'habit-action-pill';
-        unitBtn.style.cssText = 'font-size:0.7rem;padding:3px 10px;';
-        unitBtn.textContent = weightUnit.toUpperCase();
-        unitBtn.addEventListener('click', () => {
-          LS.set('weight_unit', weightUnit === 'kg' ? 'lbs' : 'kg');
-          renderChallenges();
-        });
-        wWrap.appendChild(wLabel);
-        wWrap.appendChild(wInp);
-        wWrap.appendChild(unitBtn);
-        card.appendChild(wWrap);
-
-        // Weight chart — behind Show Details pill
-        const allWeights = LS.get('weight_' + ch.id, {});
-        const wDates = Object.keys(allWeights).sort();
-        if (wDates.length >= 1) {
-          const chartActions = document.createElement('div');
-          chartActions.className = 'habit-actions';
-          const chartBtn = document.createElement('button');
-          chartBtn.className = 'habit-action-pill' + (ui.showWeightChart ? ' active' : '');
-          chartBtn.textContent = ui.showWeightChart ? 'Hide Weight Chart' : 'Show Weight Chart';
-          chartBtn.addEventListener('click', () => {
-            ui.showWeightChart = !ui.showWeightChart;
-            renderChallenges();
-          });
-          chartActions.appendChild(chartBtn);
-          card.appendChild(chartActions);
-
-          if (ui.showWeightChart && wDates.length >= 2) {
-            const displayUnit = weightUnit === 'kg' ? 'kg' : 'lbs';
-            const chartWrap = document.createElement('div');
-            chartWrap.className = 'weight-line-chart';
-            chartWrap.innerHTML = '<div class="weight-chart-title">\uD83D\uDCC9 Weight Over Time (' + displayUnit + ')</div>';
-            const canvas = document.createElement('canvas');
-            canvas.width = 600;
-            canvas.height = 140;
-            chartWrap.appendChild(canvas);
-            card.appendChild(chartWrap);
-            setTimeout(() => {
-              const ctx = canvas.getContext('2d');
-              const w = canvas.offsetWidth;
-              const h = canvas.offsetHeight;
-              canvas.width = w * 2; canvas.height = h * 2;
-              ctx.scale(2, 2);
-
-              // Build continuous date range from first entry to today
-              const firstDate = new Date(wDates[0] + 'T12:00:00');
-              const lastDate = new Date(todayStr() + 'T12:00:00');
-              const allDays = [];
-              const d = new Date(firstDate);
-              while (d <= lastDate) { allDays.push(localDateStr(d)); d.setDate(d.getDate() + 1); }
-              if (!allDays.length) return;
-
-              const vals = allDays.map(dt => allWeights[dt] ? fromLbs(allWeights[dt]) : null);
-              const realVals = vals.filter(v => v !== null);
-              const minW = Math.min(...realVals) - 0.5;
-              const maxW = Math.max(...realVals) + 0.5;
-              const range = maxW - minW || 1;
-              const padL = 36, padR = 10, padT = 10, padB = 24;
-              const plotW = w - padL - padR;
-              const plotH = h - padT - padB;
-
-              // Grid lines
-              ctx.strokeStyle = '#E0D6C8'; ctx.lineWidth = 0.5;
-              for (let g = 0; g <= 4; g++) {
-                const y = padT + (g / 4) * plotH;
-                ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
-                ctx.fillStyle = '#8B7B6B'; ctx.font = '9px DM Sans'; ctx.textAlign = 'right';
-                ctx.fillText((maxW - (g / 4) * range).toFixed(1), padL - 4, y + 3);
-              }
-
-              // Line (connect only data points, skip gaps)
-              ctx.strokeStyle = '#C47A5A'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
-              ctx.beginPath();
-              let started = false;
-              allDays.forEach((dt, i) => {
-                if (vals[i] === null) return;
-                const x = padL + (i / Math.max(1, allDays.length - 1)) * plotW;
-                const y = padT + ((maxW - vals[i]) / range) * plotH;
-                if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, y); }
-              });
-              ctx.stroke();
-
-              // Dots on data points
-              allDays.forEach((dt, i) => {
-                if (vals[i] === null) return;
-                const x = padL + (i / Math.max(1, allDays.length - 1)) * plotW;
-                const y = padT + ((maxW - vals[i]) / range) * plotH;
-                ctx.fillStyle = '#C47A5A';
-                ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
-              });
-
-              // Date labels on x-axis (show every few days to avoid crowding)
-              ctx.fillStyle = '#8B7B6B'; ctx.font = '7px DM Sans'; ctx.textAlign = 'center';
-              const labelEvery = Math.max(1, Math.ceil(allDays.length / 15));
-              allDays.forEach((dt, i) => {
-                if (i % labelEvery === 0 || i === allDays.length - 1) {
-                  const x = padL + (i / Math.max(1, allDays.length - 1)) * plotW;
-                  ctx.fillText(dt.slice(5), x, h - 4);
-                }
-              });
-            }, 50);
-          } else if (ui.showWeightChart && wDates.length < 2) {
-            const msg = document.createElement('div');
-            msg.style.cssText = 'font-size:0.78rem;color:var(--muted);text-align:center;padding:12px;';
-            msg.textContent = 'Add at least 2 weight entries to see the chart.';
-            card.appendChild(msg);
-          }
-        }
-      }
-
-      // Actions: Edit, Delete
+      // Actions: Delete, Edit, Show Details (like habit cards)
       const actions = document.createElement('div');
       actions.className = 'habit-actions';
-      const editBtn = document.createElement('button');
-      editBtn.className = 'habit-action-pill' + (ui.editing ? ' active' : '');
-      editBtn.textContent = ui.editing ? 'Cancel' : 'Edit';
-      editBtn.addEventListener('click', () => {
+      const makeActionBtn2 = (label, cls, onClick) => {
+        const b = document.createElement('button');
+        b.className = 'habit-action-pill ' + cls;
+        b.textContent = label;
+        b.addEventListener('click', onClick);
+        return b;
+      };
+      actions.appendChild(makeActionBtn2('Delete', 'danger', () => {
+        if (!confirm('Delete this challenge?')) return;
+        const c2 = getChallenges();
+        c2.splice(ci, 1);
+        setChallenges(c2);
+        renderChallenges();
+      }));
+      actions.appendChild(makeActionBtn2(ui.editing ? 'Cancel' : 'Edit', ui.editing ? 'active' : '', () => {
         ui.editing = !ui.editing;
         renderChallenges();
-      });
-      const delBtn = document.createElement('button');
-      delBtn.className = 'habit-action-pill danger';
-      delBtn.textContent = 'Delete';
-      delBtn.addEventListener('click', () => {
-        if (!confirm('Delete this challenge?')) return;
-        const c = getChallenges();
-        c.splice(ci, 1);
-        setChallenges(c);
+      }));
+      actions.appendChild(makeActionBtn2(ui.detailOpen ? 'Hide Details' : 'Show Details', ui.detailOpen ? 'active' : '', () => {
+        ui.detailOpen = !ui.detailOpen;
         renderChallenges();
-      });
-      actions.appendChild(editBtn);
-      actions.appendChild(delBtn);
+      }));
       card.appendChild(actions);
 
       // Edit form
@@ -3628,8 +3507,8 @@ function renderChallenges() {
           </div>
         `;
         ef.querySelector('[data-action="save"]').addEventListener('click', () => {
-          const c = getChallenges();
-          c[ci] = {
+          const cc = getChallenges();
+          cc[ci] = {
             ...ch,
             name: ef.querySelector('[data-f="name"]').value.trim() || ch.name,
             subtitle: ef.querySelector('[data-f="subtitle"]').value.trim(),
@@ -3638,11 +3517,120 @@ function renderChallenges() {
             startDate: ef.querySelector('[data-f="start"]').value || ch.startDate,
             unit: ef.querySelector('[data-f="unit"]').value.trim() || 'x/week'
           };
-          setChallenges(c);
+          setChallenges(cc);
           ui.editing = false;
           renderChallenges();
         });
         card.appendChild(ef);
+      }
+
+      // Show Details panel (month + year calendar like habit cards)
+      if (ui.detailOpen) {
+        const detailPanel = document.createElement('div');
+        detailPanel.className = 'habit-detail-panel open';
+
+        // View tabs
+        if (!ui.viewTab) ui.viewTab = 'month';
+        const tabs = document.createElement('div');
+        tabs.className = 'habit-view-tabs';
+        ['month', 'year'].forEach(v => {
+          const t = document.createElement('button');
+          t.className = 'habit-view-tab' + (ui.viewTab === v ? ' active' : '');
+          t.textContent = v.charAt(0).toUpperCase() + v.slice(1);
+          t.addEventListener('click', () => { ui.viewTab = v; renderChallenges(); });
+          tabs.appendChild(t);
+        });
+        detailPanel.appendChild(tabs);
+
+        // Collect all checked dates for this challenge
+        const checkedDates = new Set();
+        const scanStart = new Date(ch.startDate + 'T12:00:00');
+        const scanEnd = new Date(todayStr() + 'T12:00:00');
+        const scanD = new Date(scanStart);
+        while (scanD <= scanEnd) {
+          const ds = localDateStr(scanD);
+          const ws = getWeekStart(ds);
+          const di = scanD.getDay();
+          const wd = LS.get('challenge_' + ch.id + '_' + ws, Array(7).fill(0));
+          if (wd[di] === 1 || wd[di] === true) checkedDates.add(ds);
+          scanD.setDate(scanD.getDate() + 1);
+        }
+
+        if (ui.viewTab === 'month') {
+          const now = new Date();
+          const yr = now.getFullYear(), mo = now.getMonth();
+          const mTitle = document.createElement('div');
+          mTitle.className = 'month-cal-title';
+          mTitle.textContent = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+          detailPanel.appendChild(mTitle);
+          const cal = document.createElement('div');
+          cal.className = 'month-cal-grid';
+          cal.style.cssText = 'max-width:320px;margin:0 auto;';
+          ['S','M','T','W','T','F','S'].forEach(d => {
+            const hd = document.createElement('div');
+            hd.className = 'month-cal-header';
+            hd.textContent = d;
+            cal.appendChild(hd);
+          });
+          const dim = new Date(yr, mo + 1, 0).getDate();
+          const firstDay = new Date(yr, mo, 1).getDay();
+          for (let b = 0; b < firstDay; b++) {
+            const blank = document.createElement('div');
+            blank.className = 'month-cal-cell empty';
+            cal.appendChild(blank);
+          }
+          for (let d = 1; d <= dim; d++) {
+            const dt = new Date(yr, mo, d);
+            const ds = localDateStr(dt);
+            const filled = checkedDates.has(ds);
+            const cell = document.createElement('div');
+            cell.className = 'month-cal-cell' + (filled ? ' filled' : '') + (ds === today ? ' today' : '');
+            cell.textContent = d;
+            cal.appendChild(cell);
+          }
+          detailPanel.appendChild(cal);
+        } else if (ui.viewTab === 'year') {
+          const yr = new Date().getFullYear();
+          const yearGrid = document.createElement('div');
+          yearGrid.className = 'year-grid';
+          const mNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          mNames.forEach((mName, mi) => {
+            const mBlock = document.createElement('div');
+            mBlock.className = 'year-month-block';
+            const mLabel = document.createElement('div');
+            mLabel.className = 'year-month-label';
+            mLabel.textContent = mName;
+            mBlock.appendChild(mLabel);
+            const mGrid = document.createElement('div');
+            mGrid.className = 'year-month-grid';
+            ['S','M','T','W','T','F','S'].forEach(d => {
+              const hd = document.createElement('div');
+              hd.className = 'year-month-header';
+              hd.textContent = d;
+              mGrid.appendChild(hd);
+            });
+            const dim = new Date(yr, mi + 1, 0).getDate();
+            const firstDay = new Date(yr, mi, 1).getDay();
+            for (let b = 0; b < firstDay; b++) {
+              const blank = document.createElement('div');
+              blank.className = 'ym-cell empty';
+              mGrid.appendChild(blank);
+            }
+            for (let d = 1; d <= dim; d++) {
+              const dt = new Date(yr, mi, d);
+              const ds = localDateStr(dt);
+              const filled = checkedDates.has(ds);
+              const cell = document.createElement('div');
+              cell.className = 'ym-cell' + (filled ? ' filled' : '') + (ds === today ? ' today' : '');
+              cell.textContent = d;
+              mGrid.appendChild(cell);
+            }
+            mBlock.appendChild(mGrid);
+            yearGrid.appendChild(mBlock);
+          });
+          detailPanel.appendChild(yearGrid);
+        }
+        card.appendChild(detailPanel);
       }
 
       container.appendChild(card);
