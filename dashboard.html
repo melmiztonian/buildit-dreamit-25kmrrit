@@ -6375,6 +6375,20 @@ function renderWeightTracker() {
   c.innerHTML = '';
   const today = todayStr();
   const weightUnit = LS.get('weight_unit', 'kg');
+
+  // Migrate challenge weight data to global
+  const challenges = getChallenges();
+  const globalW = LS.get('weight_global', {});
+  let migrated = false;
+  challenges.forEach(ch => {
+    const chW = LS.get('weight_' + ch.id, null);
+    if (chW) {
+      Object.entries(chW).forEach(([date, val]) => {
+        if (!globalW[date]) { globalW[date] = val; migrated = true; }
+      });
+    }
+  });
+  if (migrated) LS.set('weight_global', globalW);
   const kgToLbs = v => Math.round(v * 2.20462 * 10) / 10;
   const lbsToKg = v => Math.round(v / 2.20462 * 10) / 10;
   const toLbs = v => weightUnit === 'kg' ? kgToLbs(v) : v;
