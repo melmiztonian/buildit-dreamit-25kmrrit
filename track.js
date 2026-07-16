@@ -50,6 +50,29 @@
     return cleanText(id).slice(0, 25);
   }
 
+  function trackPageView() {
+    var params = new URLSearchParams(window.location.search);
+    fetch(SB + '/rest/v1/page_views', {
+      method: 'POST',
+      headers: {
+        'apikey': KEY,
+        'Authorization': 'Bearer ' + KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        page: PREFIX,
+        path: window.location.pathname,
+        referrer: document.referrer || null,
+        utm_source: params.get('utm_source'),
+        utm_medium: params.get('utm_medium'),
+        utm_campaign: params.get('utm_campaign'),
+        visitor_id: getVid(),
+        user_agent: navigator.userAgent || null
+      }),
+      keepalive: true
+    }).catch(function() {});
+  }
+
   function trackClick(name) {
     fetch(SB + '/rest/v1/link_clicks', {
       method: 'POST',
@@ -92,6 +115,8 @@
   }
 
   window.addEventListener('load', function() {
+    trackPageView();
+
     var buttons = document.querySelectorAll('a[href], button, [role="button"], input[type="submit"], .btn, [class*="button"], [class*="btn"]');
     var seen = {};
 
