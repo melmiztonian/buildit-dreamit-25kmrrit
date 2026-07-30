@@ -26,8 +26,6 @@ CLAUDE.md        ← this file — update after every dashboard.html change
 - **Conflict resolution:** per-key, timestamp-based, last-write-wins with comparison. No data is overwritten by stale values from another device.
 - **Offline-safe:** if Supabase is unreachable, localStorage works as fallback. Local timestamps ensure correct merge on next sync.
 
----
-
 ## Design System
 
 ### Font (Google Fonts)

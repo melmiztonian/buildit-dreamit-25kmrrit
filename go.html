@@ -1,59 +1,126 @@
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Redirecting...</title></head>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Redirecting...</title></head>
 <body>
-<p style="font-family:sans-serif;color:#8B7B6B;text-align:center;margin-top:40vh;">Redirecting...</p>
+<div id="msg" style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#8B7B6B;text-align:center;margin-top:35vh;padding:0 24px;line-height:1.6;">Redirecting...</div>
 <script>
-const SB_URL = 'https://ingvjqyqoqggskkrklhk.supabase.co';
-const SB_KEY = 'sb_publishable_a_7d3ojYoI3Glt0R9AMbhA_1rH_urFn';
-const params = new URLSearchParams(window.location.search);
-const linkName = params.get('l');
+/* ─────────────────────────────────────────────────────────────
+   Link redirector.
 
-// Simple visitor fingerprint (not perfect, but good enough for unique counting)
+   Hardened 2026-07-30 after App Store links hung forever inside
+   Instagram's in-app browser. Two causes, both handled here:
+
+   1. localStorage was unguarded. In an iOS WKWebView (Instagram,
+      Facebook, TikTok) storage access can throw, and because
+      getVisitorId() ran synchronously while building the first
+      request body, the throw killed the script BEFORE the redirect
+      fetch was ever reached. Page sat on "Redirecting..." forever.
+      Everything touching storage is now wrapped.
+
+   2. Instagram's webview intercepts taps and often stalls on
+      apps.apple.com. Nothing here can force it, so after a short
+      timeout we stop pretending and give the user a real tappable
+      link plus instructions to open in a proper browser.
+   ───────────────────────────────────────────────────────────── */
+var SB_URL = 'https://ingvjqyqoqggskkrklhk.supabase.co';
+var SB_KEY = 'sb_publishable_a_7d3ojYoI3Glt0R9AMbhA_1rH_urFn';
+var params = new URLSearchParams(window.location.search);
+var linkName = params.get('l');
+var msg = document.getElementById('msg');
+var done = false;
+
+function show(html) { msg.innerHTML = html; }
+
+/* Storage can throw in in-app browsers. Never let it break the redirect. */
 function getVisitorId() {
-  const stored = localStorage.getItem('_vid');
-  if (stored) return stored;
-  const id = 'v_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  localStorage.setItem('_vid', id);
-  return id;
+  try {
+    var stored = localStorage.getItem('_vid');
+    if (stored) return stored;
+    var id = 'v_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    localStorage.setItem('_vid', id);
+    return id;
+  } catch (e) {
+    return null;
+  }
+}
+
+function isInAppBrowser() {
+  var ua = navigator.userAgent || '';
+  return /Instagram|FBAV|FBAN|FB_IAB|Line\/|Twitter|TikTok|Snapchat/i.test(ua);
+}
+
+/* If we cannot hand off cleanly, show a real link rather than a dead screen. */
+function fallback(dest) {
+  if (done) return;
+  done = true;
+  var inApp = isInAppBrowser();
+  var isStore = /apps\.apple\.com|itunes\.apple\.com|play\.google\.com/i.test(dest || '');
+  var html = '<p style="margin:0 0 18px;">' +
+    (dest ? 'Tap to continue:' : 'Something went wrong, please try again.') + '</p>';
+  if (dest) {
+    html += '<p style="margin:0 0 22px;"><a href="' + dest + '" style="display:inline-block;' +
+      'font-weight:700;font-size:17px;color:#050301;background:#F78C60;border:3px solid #050301;' +
+      'border-radius:50px;padding:14px 30px;text-decoration:none;box-shadow:-4px 4px 0 #050301;">Continue</a></p>';
+    if (inApp && isStore) {
+      html += '<p style="font-size:14px;color:#8B7B6B;margin:0;">If nothing happens, tap the ' +
+        '<b>&#8943;</b> menu at the top and choose <b>Open in browser</b>. ' +
+        'Instagram blocks the App Store from opening directly.</p>';
+    }
+  }
+  show(html);
 }
 
 if (!linkName) {
-  document.body.innerHTML = '<p style="font-family:sans-serif;color:#c0392b;text-align:center;margin-top:40vh;">Invalid link.</p>';
+  show('Invalid link.');
 } else {
-  // Log the click (non-blocking)
-  fetch(SB_URL + '/rest/v1/link_clicks', {
-    method: 'POST',
-    headers: {
-      'apikey': SB_KEY,
-      'Authorization': 'Bearer ' + SB_KEY,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      link_name: linkName,
-      referrer: document.referrer || null,
-      user_agent: navigator.userAgent || null,
-      utm_source: params.get('utm_source') || null,
-      utm_medium: params.get('utm_medium') || null,
-      utm_campaign: params.get('utm_campaign') || null,
-      visitor_id: getVisitorId()
-    })
-  }).catch(() => {});
+  var vid = getVisitorId();
 
-  // Fetch destination and redirect
-  fetch(SB_URL + '/rest/v1/links?name=eq.' + encodeURIComponent(linkName) + '&select=destination', {
-    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
-  })
-  .then(r => r.json())
-  .then(rows => {
-    if (rows.length && rows[0].destination) {
-      window.location.href = rows[0].destination;
-    } else {
-      document.body.innerHTML = '<p style="font-family:sans-serif;color:#c0392b;text-align:center;margin-top:40vh;">Link not found.</p>';
-    }
-  })
-  .catch(() => {
-    document.body.innerHTML = '<p style="font-family:sans-serif;color:#c0392b;text-align:center;margin-top:40vh;">Something went wrong.</p>';
+  /* Fire-and-forget click log. sendBeacon survives the page unloading,
+     which a normal fetch does not once the redirect starts. */
+  var payload = JSON.stringify({
+    link_name: linkName,
+    referrer: document.referrer || null,
+    user_agent: navigator.userAgent || null,
+    utm_source: params.get('utm_source') || null,
+    utm_medium: params.get('utm_medium') || null,
+    utm_campaign: params.get('utm_campaign') || null,
+    visitor_id: vid
   });
+  try {
+    fetch(SB_URL + '/rest/v1/link_clicks', {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' },
+      body: payload,
+      keepalive: true
+    }).catch(function () {});
+  } catch (e) { /* never block the redirect on analytics */ }
+
+  var destination = null;
+
+  /* Safety net: if the lookup or the hand-off stalls, give the user
+     something to tap instead of an infinite "Redirecting...". */
+  setTimeout(function () { fallback(destination); }, 2500);
+
+  try {
+    fetch(SB_URL + '/rest/v1/links?name=eq.' + encodeURIComponent(linkName) + '&select=destination', {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (rows) {
+      if (rows && rows.length && rows[0].destination) {
+        destination = rows[0].destination;
+        if (done) { fallback(destination); return; }
+        window.location.href = destination;
+        /* If the webview swallowed the navigation, surface the manual link. */
+        setTimeout(function () { fallback(destination); }, 1200);
+      } else {
+        done = true;
+        show('Link not found.');
+      }
+    })
+    .catch(function () { fallback(null); });
+  } catch (e) {
+    fallback(null);
+  }
 }
 </script>
 </body></html>
