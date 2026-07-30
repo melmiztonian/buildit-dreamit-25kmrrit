@@ -48,6 +48,22 @@ function isInAppBrowser() {
   return /Instagram|FBAV|FBAN|FB_IAB|Line\/|Twitter|TikTok|Snapchat/i.test(ua);
 }
 
+function isStoreUrl(u) {
+  return /^https:\/\/(apps|itunes)\.apple\.com\//i.test(u || '');
+}
+
+/* Instagram's webview refuses the universal-link handoff to the App Store, so
+   an https://apps.apple.com link just stalls. It cannot RENDER a non-web
+   scheme though, so itms-apps:// leaves it no option but to pass the URL to
+   iOS. Only swap inside in-app browsers: on desktop and real mobile browsers
+   the https link is correct and itms-apps:// would break it. */
+function navTarget(dest) {
+  if (isInAppBrowser() && isStoreUrl(dest)) {
+    return dest.replace(/^https:\/\//i, 'itms-apps://');
+  }
+  return dest;
+}
+
 /* If we cannot hand off cleanly, show a real link rather than a dead screen. */
 function fallback(dest) {
   if (done) return;
@@ -109,9 +125,11 @@ if (!linkName) {
       if (rows && rows.length && rows[0].destination) {
         destination = rows[0].destination;
         if (done) { fallback(destination); return; }
-        window.location.href = destination;
-        /* If the webview swallowed the navigation, surface the manual link. */
-        setTimeout(function () { fallback(destination); }, 1200);
+        window.location.href = navTarget(destination);
+        /* If even itms-apps:// was swallowed, surface the manual link. The
+           button always uses the original https URL, since that is what works
+           once the user reopens this in a real browser. */
+        setTimeout(function () { fallback(destination); }, 1500);
       } else {
         done = true;
         show('Link not found.');
