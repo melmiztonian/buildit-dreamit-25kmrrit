@@ -11,9 +11,32 @@ A single-file HTML dashboard (`dashboard.html`) — Melanie's personal founder O
 ```
 dashboard.html   ← entire app — HTML + CSS + JS in one file
 index.html       ← copy of dashboard.html for GitHub Pages (always keep in sync)
+go.html          ← link redirector (see below)
+track.js         ← page-view beacon
 CLAUDE.md        ← this file — update after every dashboard.html change
 .claude/settings.json  ← PostToolUse hook that reminds Claude to update CLAUDE.md
 ```
+
+## go.html — the link redirector
+
+`go.html?l=<link-name>` logs a click to `link_clicks`, looks the destination up
+in `links`, and forwards. Used by every tracked link, including the landing
+page's App Store buttons.
+
+Behaviour that is easy to break, so read before editing (revised 2026-08-04):
+
+- **No text on load.** "Redirecting..." used to paint immediately and every
+  visitor saw it flash. It now waits 1200ms before saying anything.
+- **App Store on iOS keeps the page alive.** The store opens as an APP, so this
+  page is still underneath it. After handing off we `location.replace()` to the
+  referrer (or hellomelmo.com/app), so swiping the App Store away lands on the
+  landing page rather than this redirector's "Tap to continue" fallback.
+- **Instagram can be escaped programmatically.** `instagram://extbrowser/?url=`
+  is IG's own scheme and opens Safari with no user steps. The manual
+  "tap ⋯ → Open in browser" screen is now only the fallback if that doesn't
+  fire within 1.5s. Facebook/Messenger still need `window.open('x-safari-'+url)`.
+- The landing page also has its own copy of this escape (`appstore-breakout`
+  snippet in the Shopify theme) so taps never reach here from inside IG.
 
 **Deploy workflow:** edit dashboard.html → `cp dashboard.html index.html` → commit → push → GitHub Pages auto-deploys.
 

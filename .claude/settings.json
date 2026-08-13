@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | grep -q 'dashboard\\.html' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"dashboard.html was just modified. You MUST now update CLAUDE.md in the same directory to reflect any design, feature, or configuration changes you just made.\"}}' || true"
+          }
+        ]
+      }
+    ]
+  }
+}
